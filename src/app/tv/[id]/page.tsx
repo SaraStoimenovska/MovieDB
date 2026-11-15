@@ -4,6 +4,7 @@ import { MediaType } from "@/shared/lib/tmdb/types";
 import {
   renderDetailsActions,
   renderDetailsExtras,
+  renderDetailsRecommendations,
   renderDetailsSeasons,
 } from "@/app/_details/slots";
 
@@ -21,6 +22,7 @@ export default function SeriesPage({ params }: PageProps<"/tv/[id]">) {
       renderActions={renderDetailsActions}
       renderSeasons={renderDetailsSeasons}
       renderExtra={renderDetailsExtras}
+      renderRecommendations={renderDetailsRecommendations}
     />
   );
 }

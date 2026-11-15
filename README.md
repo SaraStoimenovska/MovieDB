@@ -8,10 +8,10 @@ There is no backend and no account: everything personal is stored in your browse
 
 ## Features
 
-- **Home:** trending hero carousel, auto-advancing trending rows, _Up next_ (series in progress), _Because you liked…_, _In theaters_, _Coming soon_
+- **Home:** trending hero carousel, auto-advancing trending rows, _Up next_ (series in progress), _In theaters_, _Coming soon_
 - **Browse:** one page with Movies / Series tabs, sort + genre + year + keyword filters (kept in the URL), infinite scroll
 - **Search:** header field with live suggestions (press `/` anywhere), full results page
-- **Details:** trailer and videos, image gallery, cast (linking to person pages), key crew, keywords, age rating, where to watch for your region, seasons with per-episode tracking, TMDB reviews, recommendations
+- **Details:** trailer and videos, image gallery, cast (linking to person pages), key crew, keywords, age rating, where to watch for your region, seasons with per-episode tracking, TMDB reviews, recommendations (_Because you liked…_ once it's a favorite), franchise collection with your favorite/list buttons
 - **People:** biography and filmography (acting / crew)
 - **Your library:** favorites, want to watch / watched, personal 1–10 ratings, private notes (autosaved), reviews and comments; sort, filter by type and genre, grid or list view
 - **Upcoming:** release dates of titles on your list and the next episodes of series you follow, grouped by this week / this month / later

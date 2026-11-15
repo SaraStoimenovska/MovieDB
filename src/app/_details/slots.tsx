@@ -1,7 +1,12 @@
 import { Suspense } from "react";
 import { CollectionSection } from "@/modules/collections/server";
 import { EpisodeTracker } from "@/modules/episodes";
-import { LibraryActions, snapshotToSummary, toMediaSnapshot } from "@/modules/library";
+import {
+  DetailsRecommendations,
+  LibraryActions,
+  snapshotToSummary,
+  toMediaSnapshot,
+} from "@/modules/library";
 import { type MediaDetails } from "@/modules/media-details";
 import { NotesSection } from "@/modules/notes";
 import { ReviewsSection } from "@/modules/reviews";
@@ -49,4 +54,12 @@ export const renderDetailsExtras = (media: MediaDetails) => (
       <ReviewsSection mediaKey={media.key} title={media.title} />
     </div>
   </>
+);
+
+/** "Because you liked …" when the title is a favorite, "You might also like" otherwise. */
+export const renderDetailsRecommendations = (media: MediaDetails) => (
+  <DetailsRecommendations
+    media={{ key: media.key, title: media.title }}
+    items={media.recommendations}
+  />
 );

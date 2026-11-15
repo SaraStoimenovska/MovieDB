@@ -13,7 +13,6 @@ import {
   selectCounts,
   selectEntry,
   selectFavorites,
-  selectLatestFavorite,
   setRating,
   setWatchStatus,
   snapshotToSummary,
@@ -120,8 +119,6 @@ describe("selectors", () => {
 
   it("lists favorites newest first", () => {
     expect(selectFavorites(data).map((e) => e.media.id)).toEqual([1399, 550]);
-    expect(selectLatestFavorite(data)?.media.id).toBe(1399);
-    expect(selectLatestFavorite(empty)).toBeNull();
   });
 
   it("filters by status", () => {

@@ -13,6 +13,7 @@ type Props = {
   readonly renderActions?: (media: MediaDetails) => ReactNode;
   readonly renderSeasons?: (media: MediaDetails) => ReactNode;
   readonly renderExtra?: (media: MediaDetails) => ReactNode;
+  readonly renderRecommendations?: (media: MediaDetails) => ReactNode;
 };
 
 /**

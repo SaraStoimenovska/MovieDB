@@ -3,7 +3,7 @@
 import { CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
-import { useLibraryData, WatchStatus } from "@/modules/library";
+import { CardLibraryActions, useLibraryData, WatchStatus } from "@/modules/library";
 import { MediaPoster } from "@/modules/media";
 import { ProgressBar } from "@/shared/components/ProgressBar";
 import { routes } from "@/shared/config/routes";
@@ -66,7 +66,10 @@ export function CollectionParts({ name, parts, currentId, layout }: Props) {
           return (
             <li
               key={part.key}
-              className={cn("min-w-0", layout === "row" && "w-32 shrink-0 snap-start sm:w-36")}
+              className={cn(
+                "relative min-w-0",
+                layout === "row" && "w-32 shrink-0 snap-start sm:w-36",
+              )}
             >
               <Link
                 href={routes.media(part.mediaType, part.id)}
@@ -86,7 +89,7 @@ export function CollectionParts({ name, parts, currentId, layout }: Props) {
                     )}
                   />
                   {watched && (
-                    <span className="absolute top-1.5 right-1.5 rounded-full bg-background/90 p-0.5 shadow">
+                    <span className="absolute top-1.5 left-1.5 rounded-full bg-background/90 p-0.5 shadow">
                       <CheckCircle2 className="size-4 text-green-600" aria-hidden />
                     </span>
                   )}
@@ -101,6 +104,10 @@ export function CollectionParts({ name, parts, currentId, layout }: Props) {
                   {isCurrent && " · You're here"}
                 </p>
               </Link>
+              {/* Sibling of the link (not inside it): buttons must not be nested in <a>. */}
+              <div className="absolute top-1.5 right-1.5">
+                <CardLibraryActions media={part} />
+              </div>
             </li>
           );
         })}

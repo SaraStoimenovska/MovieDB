@@ -7,7 +7,6 @@ import {
   TrendingScope,
 } from "@/modules/catalog/server";
 import { UpNextRow } from "@/modules/episodes";
-import { BecauseYouLikedRow } from "@/modules/library";
 import { routes } from "@/shared/config/routes";
 import { MediaType } from "@/shared/lib/tmdb/types";
 import { PageSpinner } from "@/shared/ui/spinner";
@@ -41,7 +40,6 @@ export default function HomePage() {
           href={routes.browse(MediaType.Tv)}
         />
       </Suspense>
-      <BecauseYouLikedRow />
       <Suspense
         fallback={<PageSpinner className={ROW_FALLBACK} label="Loading movies in theaters" />}
       >

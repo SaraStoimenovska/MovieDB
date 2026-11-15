@@ -3,7 +3,7 @@ export { CardLibraryActions, LibraryActions } from "./components/LibraryActions"
 export { FavoritesView } from "./components/FavoritesView";
 export { MyListView } from "./components/MyListView";
 export { LibrarySync } from "./components/LibrarySync";
-export { BecauseYouLikedRow } from "./components/BecauseYouLikedRow";
+export { DetailsRecommendations } from "./components/DetailsRecommendations";
 export { AddAllToListButton } from "./components/AddAllToListButton";
 export { useLibraryData } from "./hooks/useLibrary";
 export { libraryBackup } from "./store/library-store";

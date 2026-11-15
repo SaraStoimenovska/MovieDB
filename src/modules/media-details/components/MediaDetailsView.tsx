@@ -15,6 +15,8 @@ import { TmdbReviews } from "./TmdbReviews";
 import { VideosSection } from "./VideosSection";
 import { WatchProvidersSection } from "./WatchProvidersSection";
 
+const DEFAULT_RECOMMENDATIONS_TITLE = "You might also like";
+
 type Props = {
   readonly mediaType: MediaType;
   readonly id: number;
@@ -24,6 +26,8 @@ type Props = {
   readonly renderSeasons?: (media: MediaDetails) => ReactNode;
   /** Extra sections (personal notes, local reviews) injected by the page. */
   readonly renderExtra?: (media: MediaDetails) => ReactNode;
+  /** Recommendations row; defaults to a plain "You might also like" carousel. */
+  readonly renderRecommendations?: (media: MediaDetails) => ReactNode;
 };
 
 export async function MediaDetailsView({
@@ -32,6 +36,7 @@ export async function MediaDetailsView({
   renderActions,
   renderSeasons,
   renderExtra,
+  renderRecommendations,
 }: Props) {
   const media = await getMediaDetails(mediaType, id);
   if (!media) notFound();
@@ -55,7 +60,11 @@ export async function MediaDetailsView({
         total={media.tmdbReviewCount}
         tmdbUrl={tmdbPageUrl(media)}
       />
-      <MediaCarousel title="You might also like" items={media.recommendations} />
+      {renderRecommendations ? (
+        renderRecommendations(media)
+      ) : (
+        <MediaCarousel title={DEFAULT_RECOMMENDATIONS_TITLE} items={media.recommendations} />
+      )}
     </div>
   );
 }

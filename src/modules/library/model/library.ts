@@ -269,10 +269,6 @@ export const selectByStatus = (
     .filter((entry) => entry.status === status)
     .toSorted(byNewest("statusAt"));
 
-/** The favorite to base "Because you liked …" on: the most recently favorited one. */
-export const selectLatestFavorite = (data: LibraryData): LibraryEntry | null =>
-  selectFavorites(data)[0] ?? null;
-
 export type LibraryCounts = Readonly<Record<"favorites" | WatchStatus, number>>;
 
 export const selectCounts = (data: LibraryData): LibraryCounts => {
