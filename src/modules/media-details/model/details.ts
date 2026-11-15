@@ -80,6 +80,13 @@ export type TmdbReview = {
   readonly url: string;
 };
 
+type CollectionRef = {
+  readonly id: number;
+  readonly name: string;
+  readonly posterPath: string | null;
+  readonly backdropPath: string | null;
+};
+
 export type MediaDetails = MediaSummary & {
   readonly tagline: string | null;
   readonly originalTitle: string | null;
@@ -100,7 +107,8 @@ export type MediaDetails = MediaSummary & {
   readonly imdbId: string | null;
   readonly budget: number | null;
   readonly revenue: number | null;
-  readonly collection: string | null;
+  /** The franchise collection a movie belongs to (e.g. "The Avengers Collection"). */
+  readonly collection: CollectionRef | null;
   readonly companies: ReadonlyArray<string>;
   readonly countries: ReadonlyArray<string>;
   readonly spokenLanguages: ReadonlyArray<string>;
@@ -300,7 +308,15 @@ const tmdbMovieDetailsSchema = tmdbMovieSchema.extend({
   runtime: positiveOrNull,
   budget: positiveOrNull,
   revenue: positiveOrNull,
-  belongs_to_collection: lenientObject(named, null),
+  belongs_to_collection: lenientObject(
+    z.object({
+      id: z.number(),
+      name: z.string(),
+      poster_path: emptyToNull,
+      backdrop_path: emptyToNull,
+    }),
+    null,
+  ),
   keywords: lenientObject(z.object({ keywords: lenientArray(namedWithId) }), { keywords: [] }),
   release_dates: lenientObject(
     z.object({
@@ -496,7 +512,7 @@ export type Translation = {
   readonly tagline: string | null;
 };
 
-export const toTranslations = (raw: ReadonlyArray<RawTranslation>): ReadonlyArray<Translation> =>
+const toTranslations = (raw: ReadonlyArray<RawTranslation>): ReadonlyArray<Translation> =>
   raw.map((t) => ({
     language: `${t.iso_639_1}-${t.iso_3166_1}`,
     overview: t.data.overview,
@@ -621,7 +637,14 @@ export const parseMovieDetails = (raw: unknown, region: string): MediaDetails =>
     runtimeMinutes: movie.runtime,
     budget: movie.budget,
     revenue: movie.revenue,
-    collection: movie.belongs_to_collection?.name ?? null,
+    collection: movie.belongs_to_collection
+      ? {
+          id: movie.belongs_to_collection.id,
+          name: movie.belongs_to_collection.name,
+          posterPath: movie.belongs_to_collection.poster_path,
+          backdropPath: movie.belongs_to_collection.backdrop_path,
+        }
+      : null,
     networks: [],
     seasonCount: null,
     episodeCount: null,

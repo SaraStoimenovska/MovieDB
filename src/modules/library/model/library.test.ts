@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import { MediaType } from "@/shared/lib/tmdb/types";
 import { deepFreeze, makeMedia } from "@/test/fixtures";
 import {
+  addAllToWatchList,
   EMPTY_LIBRARY,
   LIBRARY_VERSION,
   libraryDataSchema,
   migrateLibrary,
   removeFromLibrary,
+  selectAddable,
   selectByStatus,
   selectCounts,
   selectEntry,
@@ -206,5 +208,29 @@ describe("persistence", () => {
       overview: "",
       backdropPath: null,
     });
+  });
+});
+
+describe("addAllToWatchList / selectAddable", () => {
+  const a = makeMedia({ id: 1 });
+  const b = makeMedia({ id: 2 });
+  const c = makeMedia({ id: 3, mediaType: MediaType.Tv });
+
+  it("adds titles without a status to Want to watch, keeping existing statuses", () => {
+    const start = deepFreeze(setWatchStatus(EMPTY_LIBRARY, b, WatchStatus.Watched, 1));
+    expect(selectAddable(start, [a, b, c, a]).map((item) => item.key)).toEqual([a.key, c.key]);
+
+    const next = addAllToWatchList(start, [a, b, c], 5);
+    expect(
+      selectByStatus(next, WatchStatus.ToWatch)
+        .map((entry) => entry.media.key)
+        .toSorted(),
+    ).toEqual([a.key, c.key].toSorted());
+    expect(selectEntry(next, b.key)?.status).toBe(WatchStatus.Watched);
+  });
+
+  it("returns the same object when there is nothing to add", () => {
+    const start = deepFreeze(setWatchStatus(EMPTY_LIBRARY, a, WatchStatus.ToWatch, 1));
+    expect(addAllToWatchList(start, [a], 2)).toBe(start);
   });
 });

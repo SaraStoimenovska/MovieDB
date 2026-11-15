@@ -4,10 +4,12 @@ import { deepFreeze } from "@/test/fixtures";
 import {
   DEFAULT_PREFERENCES,
   DISPLAY_NAME_MAX_LENGTH,
+  LibraryView,
   migratePreferences,
   PREFERENCES_VERSION,
   preferencesSchema,
   setDisplayName,
+  setLibraryView,
   setRegion,
 } from "./preferences";
 import { isTheme, Theme, THEME_LABELS, THEMES } from "./theme";
@@ -15,8 +17,12 @@ import { isTheme, Theme, THEME_LABELS, THEMES } from "./theme";
 const prefs = deepFreeze(DEFAULT_PREFERENCES);
 
 describe("preferences", () => {
-  it("defaults to no name and the app region", () => {
-    expect(DEFAULT_PREFERENCES).toEqual({ displayName: "", region: APP_REGION });
+  it("defaults to no name, the app region and the grid view", () => {
+    expect(DEFAULT_PREFERENCES).toEqual({
+      displayName: "",
+      region: APP_REGION,
+      libraryView: LibraryView.Grid,
+    });
   });
 
   it("trims and caps the display name", () => {
@@ -32,10 +38,11 @@ describe("preferences", () => {
     expect(setRegion(prefs, input).region).toBe(expected);
   });
 
-  it("migrates v1 (name only) by adding the default region", () => {
+  it("migrates v1 (name only) by adding the default region and view", () => {
     expect(migratePreferences({ displayName: "Sam" }, 1)).toEqual({
       displayName: "Sam",
       region: APP_REGION,
+      libraryView: LibraryView.Grid,
     });
     expect(migratePreferences("junk", 1)).toEqual(DEFAULT_PREFERENCES);
     expect(preferencesSchema.safeParse(migratePreferences({ displayName: "Sam" }, 1)).success).toBe(
@@ -43,8 +50,26 @@ describe("preferences", () => {
     );
   });
 
+  it("migrates v2 (name + region) by adding the default view", () => {
+    expect(migratePreferences({ displayName: "A", region: "FR" }, 2)).toEqual({
+      displayName: "A",
+      region: "FR",
+      libraryView: LibraryView.Grid,
+    });
+    // Invalid old data (here: the region) resets to the defaults, like before.
+    expect(migratePreferences({ displayName: "A", region: "nope" }, 2)).toEqual(
+      DEFAULT_PREFERENCES,
+    );
+  });
+
+  it("sets the library view, keeping the same object when unchanged", () => {
+    const prefs = DEFAULT_PREFERENCES;
+    expect(setLibraryView(prefs, LibraryView.List).libraryView).toBe(LibraryView.List);
+    expect(setLibraryView(prefs, LibraryView.Grid)).toBe(prefs);
+  });
+
   it("passes current data through", () => {
-    const data = { displayName: "A", region: "FR" };
+    const data = { displayName: "A", region: "FR", libraryView: LibraryView.List };
     expect(migratePreferences(data, PREFERENCES_VERSION)).toBe(data);
   });
 });

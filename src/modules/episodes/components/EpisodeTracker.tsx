@@ -24,7 +24,7 @@ import {
   watchedInSeason,
 } from "../model/episodes";
 import { hasAired, parseSeasonEpisodes, seasonKeys, todayIso } from "../model/season";
-import { ProgressBar } from "./ProgressBar";
+import { ProgressBar } from "@/shared/components/ProgressBar";
 
 type TrackerSeason = SeasonInfo & {
   readonly airDate: string | null;

@@ -1,3 +1,5 @@
+import { Suspense } from "react";
+import { CollectionSection } from "@/modules/collections/server";
 import { EpisodeTracker } from "@/modules/episodes";
 import { LibraryActions, snapshotToSummary, toMediaSnapshot } from "@/modules/library";
 import { type MediaDetails } from "@/modules/media-details";
@@ -35,8 +37,16 @@ export const renderDetailsSeasons = (media: MediaDetails) => (
 );
 
 export const renderDetailsExtras = (media: MediaDetails) => (
-  <div className="grid gap-12 lg:grid-cols-[1fr_1.4fr]">
-    <NotesSection mediaKey={media.key} title={media.title} />
-    <ReviewsSection mediaKey={media.key} title={media.title} />
-  </div>
+  <>
+    {media.collection && (
+      // Streams in on its own: the rest of the page doesn't wait for the collection.
+      <Suspense fallback={null}>
+        <CollectionSection collectionId={media.collection.id} currentId={media.id} />
+      </Suspense>
+    )}
+    <div className="grid gap-12 lg:grid-cols-[1fr_1.4fr]">
+      <NotesSection mediaKey={media.key} title={media.title} />
+      <ReviewsSection mediaKey={media.key} title={media.title} />
+    </div>
+  </>
 );

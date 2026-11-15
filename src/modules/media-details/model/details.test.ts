@@ -371,3 +371,33 @@ describe("language fallback (no English overview / poster on TMDB)", () => {
     expect(withArtworkFallback(media, "garbage")).toBe(media);
   });
 });
+
+describe("collection reference", () => {
+  it("keeps id, name and artwork of the collection a movie belongs to", () => {
+    const media = parseMovieDetails(
+      {
+        ...rawMovieDetails,
+        belongs_to_collection: {
+          id: 86311,
+          name: "The Avengers Collection",
+          poster_path: "/c.jpg",
+          backdrop_path: "",
+        },
+      },
+      "US",
+    );
+    expect(media.collection).toEqual({
+      id: 86311,
+      name: "The Avengers Collection",
+      posterPath: "/c.jpg",
+      backdropPath: null,
+    });
+    expect(toFacts(media, "en-US").find((fact) => fact.label === "Collection")?.value).toBe(
+      "The Avengers Collection",
+    );
+  });
+
+  it("is null for standalone movies and for series", () => {
+    expect(parseMovieDetails(rawMovieDetails, "US").collection).toBeNull();
+  });
+});

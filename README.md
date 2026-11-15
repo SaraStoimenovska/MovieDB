@@ -13,7 +13,10 @@ There is no backend and no account: everything personal is stored in your browse
 - **Search:** header field with live suggestions (press `/` anywhere), full results page
 - **Details:** trailer and videos, image gallery, cast (linking to person pages), key crew, keywords, age rating, where to watch for your region, seasons with per-episode tracking, TMDB reviews, recommendations
 - **People:** biography and filmography (acting / crew)
-- **Your library:** favorites, want to watch / watched, personal 1–10 ratings, private notes (autosaved), reviews and comments
+- **Your library:** favorites, want to watch / watched, personal 1–10 ratings, private notes (autosaved), reviews and comments; sort, filter by type and genre, grid or list view
+- **Upcoming:** release dates of titles on your list and the next episodes of series you follow, grouped by this week / this month / later
+- **Collections:** franchise films in release order with your watched progress, on the movie page and on a collection page
+- **Share a list:** a link that carries the list itself (no account, nothing uploaded); the recipient can add everything to their own list
 - **Your stats:** time watched, counts, rating distribution, top genres
 - **Preferences:** display name, theme (light / dark / system), region, backup / restore / clear data
 - Responsive from 360 px phones to wide desktops, keyboard and screen-reader friendly

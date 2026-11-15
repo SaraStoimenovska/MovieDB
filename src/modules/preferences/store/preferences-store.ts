@@ -7,23 +7,27 @@ import { type BackupSource } from "@/shared/lib/backup";
 import { persistedStoreOptions } from "@/shared/lib/storage";
 import {
   DEFAULT_PREFERENCES,
+  type LibraryView,
   migratePreferences,
   PREFERENCES_STORAGE_KEY,
   PREFERENCES_VERSION,
   type PreferencesData,
   preferencesSchema,
   setDisplayName,
+  setLibraryView,
   setRegion,
 } from "../model/preferences";
 
 type PreferencesStore = PreferencesData & {
   readonly setDisplayName: (name: string) => void;
   readonly setRegion: (region: string) => void;
+  readonly setLibraryView: (view: LibraryView) => void;
 };
 
 const pick = (state: PreferencesData): PreferencesData => ({
   displayName: state.displayName,
   region: state.region,
+  libraryView: state.libraryView,
 });
 
 const usePreferencesStore = create<PreferencesStore>()(
@@ -32,6 +36,7 @@ const usePreferencesStore = create<PreferencesStore>()(
       ...DEFAULT_PREFERENCES,
       setDisplayName: (name) => set((state) => setDisplayName(state, name)),
       setRegion: (region) => set((state) => setRegion(state, region)),
+      setLibraryView: (view) => set((state) => setLibraryView(state, view)),
     }),
     persistedStoreOptions<PreferencesStore, PreferencesData>({
       name: PREFERENCES_STORAGE_KEY,
@@ -60,6 +65,14 @@ export const useRegion = () => {
   const region = usePreferencesStore((state) => state.region);
   const update = usePreferencesStore((state) => state.setRegion);
   return { region: ready ? region : DEFAULT_PREFERENCES.region, setRegion: update, ready } as const;
+};
+
+/** Grid or list on Favorites / My list (grid until hydrated, matching the server HTML). */
+export const useLibraryView = () => {
+  const ready = useHydrated();
+  const view = usePreferencesStore((state) => state.libraryView);
+  const update = usePreferencesStore((state) => state.setLibraryView);
+  return { view: ready ? view : DEFAULT_PREFERENCES.libraryView, setView: update } as const;
 };
 
 export const preferencesBackup: BackupSource<PreferencesData> = {

@@ -1,5 +1,8 @@
 import { type Metadata } from "next";
+import { Suspense } from "react";
+import { genreNameMap } from "@/modules/catalog/server";
 import { MyListView } from "@/modules/library";
+import { PageSpinner } from "@/shared/ui/spinner";
 
 export const metadata: Metadata = { title: "My list" };
 
@@ -12,7 +15,14 @@ export default function MyListPage() {
           What you want to watch next, and what you&apos;ve already seen.
         </p>
       </header>
-      <MyListView />
+      <Suspense fallback={<PageSpinner label="Loading your list" />}>
+        <MyList />
+      </Suspense>
     </div>
   );
+}
+
+/** Genre names (for the genre filter) come from TMDB, cached; the list itself is local. */
+async function MyList() {
+  return <MyListView genreNames={await genreNameMap()} />;
 }

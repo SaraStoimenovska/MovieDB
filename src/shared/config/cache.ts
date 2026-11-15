@@ -18,5 +18,6 @@ export const CacheTag = {
   discover: (mediaType: string) => `discover:${mediaType}`,
   media: (mediaType: string, id: number) => `media:${mediaType}:${id}`,
   person: (id: number) => `person:${id}`,
+  collection: (id: number) => `collection:${id}`,
   movieList: (list: string) => `movie-list:${list}`,
 } as const;

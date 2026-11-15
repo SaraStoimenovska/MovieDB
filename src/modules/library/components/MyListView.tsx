@@ -1,18 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { MediaGrid } from "@/modules/media";
 import { PageSpinner } from "@/shared/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs";
 import { useLibraryData } from "../hooks/useLibrary";
 import {
+  type LibraryEntry,
   selectByStatus,
   selectCounts,
   WATCH_STATUS_LABELS,
   WATCH_STATUSES,
   WatchStatus,
-  snapshotToSummary,
 } from "../model/library";
+import { LibraryCollection } from "./LibraryCollection";
 import { LibraryEmptyState } from "./LibraryEmptyState";
 import { WATCH_STATUS_ICONS } from "./status-icons";
 
@@ -34,14 +34,15 @@ const DEFAULT_TAB: WatchStatus = WatchStatus.ToWatch;
 const isWatchStatus = (value: string): value is WatchStatus =>
   (WATCH_STATUSES as ReadonlyArray<string>).includes(value);
 
-export function MyListView() {
+const statusAt = (entry: LibraryEntry) => entry.statusAt;
+
+type Props = { readonly genreNames: Readonly<Record<number, string>> };
+
+export function MyListView({ genreNames }: Props) {
   const { data, ready } = useLibraryData();
   const [tab, setTab] = useState<WatchStatus>(DEFAULT_TAB);
   const counts = useMemo(() => selectCounts(data), [data]);
-  const items = useMemo(
-    () => selectByStatus(data, tab).map((entry) => snapshotToSummary(entry.media)),
-    [data, tab],
-  );
+  const entries = useMemo(() => selectByStatus(data, tab), [data, tab]);
 
   if (!ready) return <PageSpinner label="Loading your list" />;
 
@@ -70,10 +71,17 @@ export function MyListView() {
         })}
       </TabsList>
       <TabsContent value={tab}>
-        {items.length === 0 ? (
+        {entries.length === 0 ? (
           <LibraryEmptyState icon={WATCH_STATUS_ICONS[tab]} {...EMPTY_COPY[tab]} />
         ) : (
-          <MediaGrid items={items} showType />
+          // Keyed by tab: each list starts with fresh sort/filters.
+          <LibraryCollection
+            key={tab}
+            entries={entries}
+            addedAt={statusAt}
+            genreNames={genreNames}
+            listLabel={WATCH_STATUS_LABELS[tab]}
+          />
         )}
       </TabsContent>
     </Tabs>

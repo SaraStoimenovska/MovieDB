@@ -37,10 +37,14 @@ export const routes = {
     query ? `/search?${new URLSearchParams({ [QueryParam.Search]: query }).toString()}` : "/search",
   favorites: () => "/favorites",
   myList: () => "/my-list",
+  upcoming: () => "/upcoming",
+  /** `query` is the encoded list from the sharing module (`name=…&items=…`). */
+  shared: (query: string) => `/shared?${query}`,
   preferences: () => "/preferences",
   stats: () => "/stats",
   media: (mediaType: MediaType, id: number) => `/${mediaType}/${id}`,
   person: (id: number) => `/person/${id}`,
+  collection: (id: number) => `/collection/${id}`,
 } as const;
 
 export type NavItem = { readonly label: string; readonly href: string };
@@ -54,6 +58,7 @@ export const mainNav: ReadonlyArray<NavItem> = [
 export const userNav: ReadonlyArray<NavItem> = [
   { label: "Favorites", href: routes.favorites() },
   { label: "My list", href: routes.myList() },
+  { label: "Upcoming", href: routes.upcoming() },
   { label: "Your stats", href: routes.stats() },
   { label: "Preferences", href: routes.preferences() },
 ];

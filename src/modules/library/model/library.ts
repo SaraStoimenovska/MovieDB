@@ -218,6 +218,31 @@ export const setRating = (
   );
 };
 
+/** Titles from `media` that have no watch status yet (what "Add all" would add). */
+export const selectAddable = (
+  data: LibraryData,
+  media: ReadonlyArray<MediaSummary>,
+): ReadonlyArray<MediaSummary> =>
+  media.filter(
+    (item, index) =>
+      (data.entries[item.key]?.status ?? null) === null &&
+      media.findIndex((other) => other.key === item.key) === index,
+  );
+
+/**
+ * Adds every title without a watch status to "Want to watch" (e.g. a shared list).
+ * Titles already watched or planned keep their status. Same object when nothing changes.
+ */
+export const addAllToWatchList = (
+  data: LibraryData,
+  media: ReadonlyArray<MediaSummary>,
+  now: number,
+): LibraryData =>
+  selectAddable(data, media).reduce(
+    (acc, item) => setWatchStatus(acc, item, WatchStatus.ToWatch, now),
+    data,
+  );
+
 export const removeFromLibrary = (data: LibraryData, key: MediaKey): LibraryData =>
   withoutKey(data, key);
 

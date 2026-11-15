@@ -86,6 +86,35 @@ const parsePagedResponse = <S extends z.ZodType, T>(
 export const parseMoviePage = (raw: unknown): Paged<MediaSummary> =>
   parsePagedResponse(raw, tmdbMovieSchema, mapMovie);
 
+/** A bare array of movies (e.g. a collection's parts), parsed leniently like page results. */
+export const parseMovieList = (raw: unknown): ReadonlyArray<MediaSummary> =>
+  (Array.isArray(raw) ? raw : [])
+    .map((item) => tmdbMovieSchema.safeParse(item))
+    .map((parsed) => (parsed.success ? mapMovie(parsed.data) : null))
+    .filter(isPresent);
+
+/**
+ * A `movie/{id}` or `tv/{id}` details response → card summary (`null` if it doesn't parse).
+ * Details list `genres: [{ id, name }]` instead of `genre_ids`.
+ */
+export const parseDetailsSummary = (mediaType: MediaType, raw: unknown): MediaSummary | null => {
+  const genres =
+    raw && typeof raw === "object" && "genres" in raw && Array.isArray(raw.genres)
+      ? raw.genres.flatMap((genre: unknown) =>
+          genre && typeof genre === "object" && "id" in genre && typeof genre.id === "number"
+            ? [genre.id]
+            : [],
+        )
+      : [];
+  const withIds = raw && typeof raw === "object" ? { ...raw, genre_ids: genres } : raw;
+  if (mediaType === MediaType.Movie) {
+    const parsed = tmdbMovieSchema.safeParse(withIds);
+    return parsed.success ? mapMovie(parsed.data) : null;
+  }
+  const parsed = tmdbTvSchema.safeParse(withIds);
+  return parsed.success ? mapTv(parsed.data) : null;
+};
+
 export const parseTvPage = (raw: unknown): Paged<MediaSummary> =>
   parsePagedResponse(raw, tmdbTvSchema, mapTv);
 

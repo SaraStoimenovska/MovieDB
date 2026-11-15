@@ -8,7 +8,7 @@ import { MediaType } from "@/shared/lib/tmdb/types";
 import { useEpisodesData } from "../hooks/useEpisodes";
 import { formatEpisodeRef, progressSummary, selectUpNext } from "../model/episodes";
 import { EPISODES_SECTION_ID } from "./EpisodeTracker";
-import { ProgressBar } from "./ProgressBar";
+import { ProgressBar } from "@/shared/components/ProgressBar";
 
 /** Shows shown in "Up next" (most recently watched first). */
 const UP_NEXT_LIMIT = 12;

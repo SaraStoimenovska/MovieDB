@@ -13,6 +13,7 @@ import {
   libraryDataSchema,
   type MediaExtras,
   migrateLibrary,
+  addAllToWatchList,
   removeFromLibrary,
   setRating,
   setWatchStatus,
@@ -29,6 +30,7 @@ type LibraryActions = {
   ) => void;
   readonly setRating: (media: MediaSummary, rating: number | null, extras?: MediaExtras) => void;
   readonly remove: (key: MediaKey) => void;
+  readonly addAllToWatchList: (media: ReadonlyArray<MediaSummary>) => void;
 };
 
 export type LibraryStore = LibraryData & LibraryActions;
@@ -49,6 +51,7 @@ export const useLibraryStore = create<LibraryStore>()(
       setRating: (media, rating, extras) =>
         set((state) => setRating(state, media, rating, Date.now(), extras)),
       remove: (key) => set((state) => removeFromLibrary(state, key)),
+      addAllToWatchList: (media) => set((state) => addAllToWatchList(state, media, Date.now())),
     }),
     persistedStoreOptions<LibraryStore, LibraryData>({
       name: LIBRARY_STORAGE_KEY,

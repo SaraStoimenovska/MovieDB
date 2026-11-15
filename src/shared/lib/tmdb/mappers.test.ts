@@ -2,11 +2,15 @@ import { describe, expect, it } from "vitest";
 import {
   getNextPageParam,
   normalizeDate,
+  parseDetailsSummary,
+  parseMovieList,
   parseMoviePage,
   parseMultiPage,
   parseTvPage,
 } from "@/shared/lib/tmdb/mappers";
 import { tmdbImageUrl } from "@/shared/lib/tmdb/image";
+import { MediaType } from "@/shared/lib/tmdb/types";
+import { rawMovie as fixtureMovie, rawTv as fixtureTv } from "@/test/fixtures";
 
 const rawMovie = {
   id: 550,
@@ -136,5 +140,29 @@ describe("tmdbImageUrl", () => {
 
   it("returns null without a path", () => {
     expect(tmdbImageUrl(null)).toBeNull();
+  });
+});
+
+describe("parseDetailsSummary", () => {
+  it("turns a details response (genres objects) into a card summary", () => {
+    const { genre_ids: _ids, ...details } = fixtureMovie();
+    const summary = parseDetailsSummary(MediaType.Movie, {
+      ...details,
+      genres: [{ id: 18, name: "Drama" }, { id: 53, name: "Thriller" }, { name: "no id" }],
+    });
+    expect(summary).toMatchObject({ key: "movie:550", title: "Fight Club", genreIds: [18, 53] });
+  });
+
+  it("works for series and returns null for junk", () => {
+    expect(parseDetailsSummary(MediaType.Tv, fixtureTv())?.key).toBe("tv:1399");
+    expect(parseDetailsSummary(MediaType.Movie, { id: "x" })).toBeNull();
+    expect(parseDetailsSummary(MediaType.Movie, null)).toBeNull();
+  });
+});
+
+describe("parseMovieList", () => {
+  it("parses valid movies and skips the rest", () => {
+    expect(parseMovieList([fixtureMovie(), { id: "bad" }]).map((movie) => movie.id)).toEqual([550]);
+    expect(parseMovieList("not an array")).toEqual([]);
   });
 });

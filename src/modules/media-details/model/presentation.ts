@@ -85,7 +85,7 @@ export const toFacts = (media: MediaDetails, locale: string): ReadonlyArray<Fact
     { label: "Spoken languages", value: list(media.spokenLanguages) },
     { label: "Countries", value: list(media.countries) },
     { label: "Production", value: list(media.companies, FACT_LIST_LIMIT.companies) },
-    { label: "Collection", value: media.collection ?? "" },
+    { label: "Collection", value: media.collection?.name ?? "" },
     { label: "Budget", value: formatCurrency(media.budget, locale) },
     { label: "Revenue", value: formatCurrency(media.revenue, locale) },
   ].filter((fact) => fact.value !== "");

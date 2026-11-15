@@ -6,7 +6,7 @@ import { type PosterSize, tmdbImageUrl } from "@/shared/lib/tmdb/image";
 import { cn } from "@/shared/utils/cn";
 
 /** Static placeholder (in `public/`) for titles without a poster, or when the CDN image fails. */
-export const FALLBACK_POSTER_SRC = "/fallback-poster.svg";
+const FALLBACK_POSTER_SRC = "/fallback-poster.svg";
 
 type Props = {
   readonly path: string | null;
