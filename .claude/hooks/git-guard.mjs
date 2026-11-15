@@ -43,6 +43,8 @@ if (has("push")) {
   const pushSegment = segments.find((s) => sub(s) === "push") ?? "";
   const targets = pushSegment
     .replace(/^.*?\bpush\b/, "")
+    // Drop shell redirects (`2>&1`, `> log`, `>> log`, `< in`): they aren't refspecs.
+    .replace(/\s\d*(>>?|<)&?\s*\S*/g, " ")
     .split(/\s+/)
     .filter((token) => token && !token.startsWith("-"));
   const refspecs = targets.slice(1); // targets[0] is the remote
