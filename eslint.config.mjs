@@ -128,5 +128,7 @@ export default defineConfig([
     "coverage/**",
     "playwright-report/**",
     "next-env.d.ts",
+    // Claude Code hook scripts: tooling, not app code.
+    ".claude/**",
   ]),
 ]);

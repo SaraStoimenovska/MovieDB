@@ -53,3 +53,22 @@ src/shared/              ui (shadcn), lib, hooks, utils, config, types: no featu
 
 - `senior-developer`: implements features following these rules.
 - `senior-qa`: writes and reviews tests, hunts edge cases.
+
+## Skills (`.claude/skills/`)
+
+`new-module`, `pure-functions`, `immutable-data` (how to write code here), `probe` (check the real
+app in a browser), `verify` (full check before "done"), `ship` (commit/merge/push).
+
+## Hooks (`.claude/settings.json` → `.claude/hooks/*.mjs`)
+
+- **post-edit**: blocks broken encoding (mojibake, BOM), then Prettier + ESLint on the edited file.
+- **secret-guard**: no reading `.env*` (except `.env.example`) or printing env secrets.
+  Leak check: `node .claude/hooks/scan-secrets.mjs`.
+- **branch-guard**: always work on a branch; editing repo files while `main` is checked out is
+  blocked.
+- **git-guard**: every git command that changes something asks the user first (read-only ones
+  like `status`/`diff`/`log` don't). Commits only on the work branch, after a fresh `pnpm build`.
+  The user tests the branch, then approves merging into `main` and pushing (only `main` is
+  pushed). Never `--no-verify`, force push, `reset --hard`.
+- **stop-tests**: when Claude finishes, runs `vitest related` for changed source files and warns
+  if they fail.
