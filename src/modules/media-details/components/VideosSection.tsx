@@ -4,6 +4,9 @@ import { Play } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/shared/utils/cn";
 import { type Video } from "../model/details";
+import { SECTION_IDS } from "../model/presentation";
+
+const VIDEOS_HEADING_ID = `-heading`;
 
 const thumbnail = (key: string, quality: "hqdefault" | "mqdefault" = "hqdefault") =>
   `https://i.ytimg.com/vi/${encodeURIComponent(key)}/${quality}.jpg`;
@@ -23,8 +26,12 @@ export function VideosSection({ videos }: { readonly videos: ReadonlyArray<Video
   };
 
   return (
-    <section id="videos" aria-labelledby="videos-heading" className="scroll-mt-24 space-y-4">
-      <h2 id="videos-heading" className="text-xl font-semibold tracking-tight">
+    <section
+      id={SECTION_IDS.videos}
+      aria-labelledby={VIDEOS_HEADING_ID}
+      className="scroll-mt-24 space-y-4"
+    >
+      <h2 id={VIDEOS_HEADING_ID} className="text-xl font-semibold tracking-tight">
         Videos{" "}
         <span className="text-base font-normal text-muted-foreground">({videos.length})</span>
       </h2>

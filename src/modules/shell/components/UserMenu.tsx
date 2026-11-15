@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark, Heart, Settings, UserRound } from "lucide-react";
+import { BarChart3, Bookmark, Heart, Settings, UserRound } from "lucide-react";
 import Link from "next/link";
 import { type ComponentType } from "react";
 import { routes } from "@/shared/config/routes";
@@ -23,6 +23,7 @@ type MenuLink = {
 const LIBRARY_LINKS: ReadonlyArray<MenuLink> = [
   { label: "Favorites", href: routes.favorites(), icon: Heart },
   { label: "My list", href: routes.myList(), icon: Bookmark },
+  { label: "Your stats", href: routes.stats(), icon: BarChart3 },
 ];
 
 export function UserMenu() {

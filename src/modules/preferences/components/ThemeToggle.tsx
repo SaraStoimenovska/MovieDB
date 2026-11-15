@@ -3,8 +3,8 @@
 import { Check, Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { type ComponentType } from "react";
-import { isTheme, type Theme, THEME_LABELS, THEMES } from "../model/theme";
 import { useHydrated } from "@/shared/hooks/useHydrated";
+import { DEFAULT_THEME, isTheme, Theme, THEME_LABELS, THEMES } from "../model/theme";
 import { Button } from "@/shared/ui/button";
 import {
   DropdownMenu,
@@ -14,16 +14,16 @@ import {
 } from "@/shared/ui/dropdown-menu";
 
 const THEME_ICONS: Readonly<Record<Theme, ComponentType<{ className?: string }>>> = {
-  light: Sun,
-  dark: Moon,
-  system: Monitor,
+  [Theme.Light]: Sun,
+  [Theme.Dark]: Moon,
+  [Theme.System]: Monitor,
 };
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
   const hydrated = useHydrated();
-  // The stored theme is only known on the client; show "system" until hydrated to match the server HTML.
-  const current: Theme = hydrated && isTheme(theme) ? theme : "system";
+  // The stored theme is only known on the client; show the default until hydrated to match the server HTML.
+  const current: Theme = hydrated && isTheme(theme) ? theme : DEFAULT_THEME;
   const CurrentIcon = THEME_ICONS[current];
 
   return (

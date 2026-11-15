@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { APP_LOCALE } from "@/shared/config/app";
 import { routes } from "@/shared/config/routes";
-import { type MediaSummary } from "@/shared/lib/tmdb/types";
+import { MEDIA_TYPE_LABELS, type MediaSummary } from "@/shared/lib/tmdb/types";
 import { Badge } from "@/shared/ui/badge";
 import { formatYear } from "@/shared/utils/format";
 import { useMediaCardActions } from "../context/card-actions";
@@ -32,6 +32,7 @@ export function MediaCard({ media, priority = false, showType = false, sizes }: 
           path={media.posterPath}
           title={media.title}
           priority={priority}
+          decorative
           sizes={sizes}
           className="transition-transform duration-200 group-hover:scale-[1.02]"
         />
@@ -46,7 +47,7 @@ export function MediaCard({ media, priority = false, showType = false, sizes }: 
             />
             {showType && (
               <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
-                {media.mediaType === "movie" ? "Movie" : "Series"}
+                {MEDIA_TYPE_LABELS[media.mediaType]}
               </Badge>
             )}
           </div>

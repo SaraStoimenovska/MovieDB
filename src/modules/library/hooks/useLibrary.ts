@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useHydrated } from "@/shared/hooks/useHydrated";
+import { useRehydrateOnStorage } from "@/shared/hooks/useRehydrateOnStorage";
 import { type MediaKey } from "@/shared/lib/tmdb/types";
 import {
   EMPTY_LIBRARY,
   LIBRARY_STORAGE_KEY,
   type LibraryData,
   type LibraryEntry,
-  selectCounts,
   selectEntry,
 } from "../model/library";
 import { useLibraryStore } from "../store/library-store";
@@ -29,24 +29,16 @@ export const useLibraryEntry = (key: MediaKey): LibraryEntry | null => {
   return selectEntry(data, key);
 };
 
-export const useLibraryCounts = () => selectCounts(useLibraryData().data);
-
 export const useLibraryActions = () =>
   useLibraryStore(
     useShallow((state) => ({
       toggleFavorite: state.toggleFavorite,
       setStatus: state.setStatus,
+      setRating: state.setRating,
       remove: state.remove,
     })),
   );
 
 /** Keeps several open tabs in sync: another tab's write re-hydrates this one. */
-export const useLibraryCrossTabSync = () => {
-  useEffect(() => {
-    const onStorage = (event: StorageEvent) => {
-      if (event.key === LIBRARY_STORAGE_KEY) void useLibraryStore.persist.rehydrate();
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
-};
+export const useLibraryCrossTabSync = () =>
+  useRehydrateOnStorage(LIBRARY_STORAGE_KEY, useLibraryStore.persist.rehydrate);

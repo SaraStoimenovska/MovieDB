@@ -1,26 +1,22 @@
 import { Play } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { routes } from "@/shared/config/routes";
 import { type ReactNode } from "react";
 import { MediaPoster, MediaRating } from "@/modules/media";
 import { APP_LOCALE } from "@/shared/config/app";
 import { tmdbImageUrl } from "@/shared/lib/tmdb/image";
 import { Badge } from "@/shared/ui/badge";
 import { Button } from "@/shared/ui/button";
-import { formatCompactNumber, formatRuntime, formatYear } from "@/shared/utils/format";
+import { formatCompactNumber, formatLanguage } from "@/shared/utils/format";
 import { type MediaDetails } from "../model/details";
+import { DETAILS_COPY, heroMetaItems, SECTION_IDS } from "../model/presentation";
 
 type Props = { readonly media: MediaDetails; readonly actions?: ReactNode };
 
 export function MediaHero({ media, actions }: Props) {
   const backdrop = tmdbImageUrl(media.backdropPath, "w1280");
-  const year = formatYear(media.releaseDate, APP_LOCALE);
-  const runtime = formatRuntime(media.runtimeMinutes, APP_LOCALE);
-  const meta = [
-    media.mediaType === "movie" ? "Movie" : "Series",
-    year,
-    media.mediaType === "tv" ? runtime && `${runtime} / episode` : runtime,
-    media.seasonCount ? `${media.seasonCount} season${media.seasonCount === 1 ? "" : "s"}` : "",
-  ].filter(Boolean);
+  const meta = heroMetaItems(media, APP_LOCALE);
 
   return (
     <section className="relative -mx-4 -mt-8 overflow-hidden sm:mx-0 sm:rounded-xl">
@@ -49,7 +45,9 @@ export function MediaHero({ media, actions }: Props) {
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{media.title}</h1>
+            <h1 className="text-2xl font-bold tracking-tight break-words sm:text-3xl md:text-4xl">
+              {media.title}
+            </h1>
             {media.originalTitle && (
               <p className="text-sm text-muted-foreground">Original title: {media.originalTitle}</p>
             )}
@@ -88,7 +86,14 @@ export function MediaHero({ media, actions }: Props) {
             <ul className="flex flex-wrap gap-2" aria-label="Genres">
               {media.genres.map((genre) => (
                 <li key={genre.id}>
-                  <Badge variant="secondary">{genre.name}</Badge>
+                  <Badge asChild variant="secondary" className="hover:bg-secondary/70">
+                    <Link
+                      href={routes.browse({ mediaType: media.mediaType, genreId: genre.id })}
+                      title={`Browse ${genre.name.toLowerCase()} titles`}
+                    >
+                      {genre.name}
+                    </Link>
+                  </Badge>
                 </li>
               ))}
             </ul>
@@ -97,7 +102,7 @@ export function MediaHero({ media, actions }: Props) {
           <div className="flex flex-wrap gap-2">
             {media.trailer && (
               <Button asChild>
-                <a href="#videos">
+                <a href={`#${SECTION_IDS.videos}`}>
                   <Play className="size-4 fill-current" aria-hidden />
                   Watch trailer
                 </a>
@@ -108,15 +113,21 @@ export function MediaHero({ media, actions }: Props) {
 
           <div className="space-y-2">
             <h2 className="text-lg font-semibold">Overview</h2>
-            <p className="max-w-prose leading-relaxed">
+            <p lang={media.overviewLanguage ?? undefined} className="max-w-prose leading-relaxed">
               {media.overview || "No overview available."}
             </p>
+            {media.overviewLanguage && (
+              <p className="text-xs text-muted-foreground">
+                No English overview on TMDB yet: shown in{" "}
+                {formatLanguage(media.overviewLanguage, APP_LOCALE)}.
+              </p>
+            )}
           </div>
 
           {media.creators.length > 0 && (
             <p className="text-sm">
               <span className="text-muted-foreground">
-                {media.mediaType === "movie" ? "Directed by " : "Created by "}
+                {DETAILS_COPY[media.mediaType].creatorsPrefix}{" "}
               </span>
               <span className="font-medium">{media.creators.join(", ")}</span>
             </p>

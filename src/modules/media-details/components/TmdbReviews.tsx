@@ -4,7 +4,9 @@ import { Star } from "lucide-react";
 import { useState } from "react";
 import { useFormatters } from "@/shared/hooks/useFormatters";
 import { Button } from "@/shared/ui/button";
+import { truncate } from "@/shared/utils/text";
 import { type TmdbReview } from "../model/details";
+import { SECTION_IDS } from "../model/presentation";
 
 const PREVIEW_CHARS = 420;
 
@@ -19,9 +21,9 @@ export function TmdbReviews({ reviews, total, tmdbUrl }: Props) {
   if (reviews.length === 0) return null;
 
   return (
-    <section aria-labelledby="tmdb-reviews-heading" className="space-y-4">
+    <section aria-labelledby={SECTION_IDS.tmdbReviews} className="space-y-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="tmdb-reviews-heading" className="text-xl font-semibold tracking-tight">
+        <h2 id={SECTION_IDS.tmdbReviews} className="text-xl font-semibold tracking-tight">
           Reviews from TMDB{" "}
           <span className="text-base font-normal text-muted-foreground">({total})</span>
         </h2>
@@ -51,8 +53,7 @@ function ReviewCard({ review }: { readonly review: TmdbReview }) {
   const [expanded, setExpanded] = useState(false);
   const format = useFormatters();
   const long = review.content.length > PREVIEW_CHARS;
-  const text =
-    expanded || !long ? review.content : `${review.content.slice(0, PREVIEW_CHARS).trimEnd()}…`;
+  const text = expanded ? review.content : truncate(review.content, PREVIEW_CHARS);
 
   return (
     <article className="h-full space-y-3 rounded-lg border p-4">

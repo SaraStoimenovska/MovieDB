@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TMDB_LANGUAGE } from "@/shared/config/app";
 import { type Genre } from "@/modules/catalog";
 import {
   mapMovie,
@@ -8,7 +9,8 @@ import {
   parseTvPage,
 } from "@/shared/lib/tmdb/mappers";
 import { tmdbMovieSchema, tmdbTvSchema } from "@/shared/lib/tmdb/schemas";
-import { type MediaSummary, type MediaType } from "@/shared/lib/tmdb/types";
+import { UNRANKED } from "@/shared/lib/tmdb/constants";
+import { type MediaSummary, MediaType } from "@/shared/lib/tmdb/types";
 
 // ===================== Domain =====================
 
@@ -18,6 +20,9 @@ export type CastMember = {
   readonly character: string;
   readonly profilePath: string | null;
 };
+
+/** TMDB keyword (links to browse filtered by it). */
+type Keyword = { readonly id: number; readonly name: string };
 
 export type CrewCredit = { readonly job: string; readonly names: ReadonlyArray<string> };
 
@@ -49,7 +54,7 @@ export type WatchProviders = {
   readonly buy: ReadonlyArray<WatchProvider>;
 };
 
-export type Season = {
+type Season = {
   readonly id: number;
   readonly number: number;
   readonly name: string;
@@ -59,7 +64,7 @@ export type Season = {
   readonly overview: string;
 };
 
-export type EpisodeInfo = {
+type EpisodeInfo = {
   readonly name: string;
   readonly airDate: string | null;
   readonly season: number;
@@ -79,9 +84,16 @@ export type MediaDetails = MediaSummary & {
   readonly tagline: string | null;
   readonly originalTitle: string | null;
   readonly originalLanguage: string | null;
+  /**
+   * BCP 47 tag (e.g. "es-MX") when the overview/tagline come from a translation because TMDB has
+   * none in the UI language; `null` when they're in the UI language.
+   */
+  readonly overviewLanguage: string | null;
+  /** Best other language to ask TMDB for missing artwork (e.g. no English poster). */
+  readonly fallbackLanguage: string | null;
   readonly certification: string | null;
   readonly genres: ReadonlyArray<Genre>;
-  readonly keywords: ReadonlyArray<string>;
+  readonly keywords: ReadonlyArray<Keyword>;
   readonly runtimeMinutes: number | null;
   readonly status: string | null;
   readonly homepage: string | null;
@@ -118,22 +130,34 @@ export type MediaDetails = MediaSummary & {
 
 // ===================== Request =====================
 
-/** One request for everything on the details page (TMDB allows up to 20 appends). */
+/** Sub-resources fetched together with the details (TMDB allows up to 20 appends). */
+const COMMON_APPENDS = [
+  "credits",
+  "videos",
+  "images",
+  "keywords",
+  "recommendations",
+  "external_ids",
+  "watch/providers",
+  "reviews",
+  // Fallback text when the UI language has no overview (see `pickTranslation`).
+  "translations",
+] as const;
+
+/** Age ratings live in a differently named resource per media type. */
+const AGE_RATING_APPEND: Readonly<Record<MediaType, string>> = {
+  [MediaType.Movie]: "release_dates",
+  [MediaType.Tv]: "content_ratings",
+};
+
+/** Images/videos are otherwise filtered to the UI language; "null" adds language-neutral ones. */
+const ASSET_LANGUAGES = "en,null";
+
+/** One request for everything on the details page. */
 export const detailsRequestParams = (mediaType: MediaType) => ({
-  append_to_response: [
-    "credits",
-    "videos",
-    "images",
-    "keywords",
-    "recommendations",
-    "external_ids",
-    "watch/providers",
-    "reviews",
-    mediaType === "movie" ? "release_dates" : "content_ratings",
-  ].join(","),
-  // Images/videos are otherwise filtered to the UI language; "null" adds language-neutral ones.
-  include_image_language: "en,null",
-  include_video_language: "en,null",
+  append_to_response: [...COMMON_APPENDS, AGE_RATING_APPEND[mediaType]].join(","),
+  include_image_language: ASSET_LANGUAGES,
+  include_video_language: ASSET_LANGUAGES,
 });
 
 // ===================== Raw schemas (lenient) =====================
@@ -167,12 +191,18 @@ const lenientArray = <S extends z.ZodType>(schema: S) =>
 
 /** Object that falls back to `fallback` when missing or malformed. */
 const lenientObject = <S extends z.ZodType, F>(schema: S, fallback: F) =>
-  z.unknown().transform((value): z.infer<S> | F => {
-    const parsed = schema.safeParse(value);
-    return parsed.success ? (parsed.data as z.infer<S>) : fallback;
-  });
+  // `.optional()` first: in Zod v4 a transformed `unknown` is still a *required* key, so a
+  // response without e.g. `videos` would fail the whole page instead of using the fallback.
+  z
+    .unknown()
+    .optional()
+    .transform((value): z.infer<S> | F => {
+      const parsed = schema.safeParse(value);
+      return parsed.success ? (parsed.data as z.infer<S>) : fallback;
+    });
 
 const named = z.object({ name: z.string() });
+const namedWithId = z.object({ id: z.number(), name: z.string() });
 
 const castSchema = z.object({
   id: z.number(),
@@ -224,6 +254,14 @@ const reviewSchema = z.object({
   url: z.string(),
 });
 
+const translationSchema = z.object({
+  iso_639_1: z.string(),
+  iso_3166_1: z.string(),
+  data: z.object({ overview: textOrEmpty, tagline: emptyToNull }),
+});
+
+type RawTranslation = z.infer<typeof translationSchema>;
+
 const commonExtras = {
   genres: lenientArray(z.object({ id: z.number(), name: z.string() })),
   tagline: emptyToNull,
@@ -250,17 +288,20 @@ const commonExtras = {
     z.object({ results: lenientArray(reviewSchema), total_results: z.number() }),
     { results: [], total_results: 0 },
   ),
-  recommendations: z.unknown(),
+  recommendations: z.unknown().optional(),
+  translations: lenientObject(z.object({ translations: lenientArray(translationSchema) }), {
+    translations: [],
+  }),
 };
 
-export const tmdbMovieDetailsSchema = tmdbMovieSchema.extend({
+const tmdbMovieDetailsSchema = tmdbMovieSchema.extend({
   ...commonExtras,
   original_title: emptyToNull,
   runtime: positiveOrNull,
   budget: positiveOrNull,
   revenue: positiveOrNull,
   belongs_to_collection: lenientObject(named, null),
-  keywords: lenientObject(z.object({ keywords: lenientArray(named) }), { keywords: [] }),
+  keywords: lenientObject(z.object({ keywords: lenientArray(namedWithId) }), { keywords: [] }),
   release_dates: lenientObject(
     z.object({
       results: lenientArray(
@@ -281,7 +322,7 @@ const episodeSchema = z.object({
   episode_number: z.number(),
 });
 
-export const tmdbTvDetailsSchema = tmdbTvSchema.extend({
+const tmdbTvDetailsSchema = tmdbTvSchema.extend({
   ...commonExtras,
   original_name: emptyToNull,
   episode_run_time: lenientArray(z.number()),
@@ -302,7 +343,7 @@ export const tmdbTvDetailsSchema = tmdbTvSchema.extend({
       overview: textOrEmpty,
     }),
   ),
-  keywords: lenientObject(z.object({ results: lenientArray(named) }), { results: [] }),
+  keywords: lenientObject(z.object({ results: lenientArray(namedWithId) }), { results: [] }),
   content_ratings: lenientObject(
     z.object({ results: lenientArray(z.object({ iso_3166_1: z.string(), rating: textOrEmpty })) }),
     { results: [] },
@@ -358,7 +399,7 @@ export const pickTrailer = (videos: ReadonlyArray<Video>): Video | null =>
 
 export const mapCast = (cast: ReadonlyArray<RawCast>): ReadonlyArray<CastMember> =>
   cast
-    .toSorted((a, b) => (a.order ?? Number.MAX_SAFE_INTEGER) - (b.order ?? Number.MAX_SAFE_INTEGER))
+    .toSorted((a, b) => (a.order ?? UNRANKED) - (b.order ?? UNRANKED))
     .slice(0, LIMITS.cast)
     .map((member) => ({
       id: member.id,
@@ -401,7 +442,7 @@ export const mapImages = (
 
 const mapProviders = (providers: ReadonlyArray<RawProvider>): ReadonlyArray<WatchProvider> =>
   providers
-    .toSorted((a, b) => (a.display_priority ?? 999) - (b.display_priority ?? 999))
+    .toSorted((a, b) => (a.display_priority ?? UNRANKED) - (b.display_priority ?? UNRANKED))
     .map((p) => ({ id: p.provider_id, name: p.provider_name, logoPath: p.logo_path }));
 
 const uniqueProviders = (providers: ReadonlyArray<WatchProvider>): ReadonlyArray<WatchProvider> =>
@@ -427,7 +468,7 @@ export const mapWatchProviders = (
   return empty ? null : result;
 };
 
-export const mapReviews = (reviews: ReadonlyArray<RawReview>): ReadonlyArray<TmdbReview> =>
+const mapReviews = (reviews: ReadonlyArray<RawReview>): ReadonlyArray<TmdbReview> =>
   reviews.slice(0, LIMITS.reviews).map((review) => ({
     id: review.id,
     author: review.author,
@@ -448,6 +489,70 @@ export const pickCertification = (
     .find((value) => value.trim() !== "") ?? null;
 
 /** Only show the original title when it actually differs. */
+export type Translation = {
+  /** BCP 47 tag, e.g. "es-MX". */
+  readonly language: string;
+  readonly overview: string;
+  readonly tagline: string | null;
+};
+
+export const toTranslations = (raw: ReadonlyArray<RawTranslation>): ReadonlyArray<Translation> =>
+  raw.map((t) => ({
+    language: `${t.iso_639_1}-${t.iso_3166_1}`,
+    overview: t.data.overview,
+    tagline: t.data.tagline,
+  }));
+
+const languageOf = (tag: string): string => tag.split("-")[0] ?? tag;
+
+/**
+ * Pure: the best translation to fall back to: one with an overview first, then the UI language
+ * (another region of it), then the original language, then any other, keeping TMDB's order.
+ * The exact UI language is skipped: it's what came back empty.
+ */
+export const pickTranslation = (
+  translations: ReadonlyArray<Translation>,
+  uiLanguage: string,
+  originalLanguage: string | null,
+): Translation | null => {
+  const rank = (t: Translation): number =>
+    (t.overview ? 0 : 3) +
+    (languageOf(t.language) === languageOf(uiLanguage)
+      ? 0
+      : languageOf(t.language) === originalLanguage
+        ? 1
+        : 2);
+  return (
+    translations
+      .filter((t) => t.language !== uiLanguage)
+      .toSorted((a, b) => rank(a) - rank(b))[0] ?? null
+  );
+};
+
+/** Fills an empty overview (and tagline) from the best translation. */
+const withTextFallback = (
+  raw: {
+    readonly overview: string;
+    readonly tagline: string | null;
+    readonly original_language: string | null;
+    readonly translations: { readonly translations: ReadonlyArray<RawTranslation> };
+  },
+  uiLanguage: string,
+) => {
+  const fallback = pickTranslation(
+    toTranslations(raw.translations.translations),
+    uiLanguage,
+    raw.original_language,
+  );
+  const useFallback = !raw.overview && fallback !== null && fallback.overview !== "";
+  return {
+    overview: useFallback ? fallback.overview : raw.overview,
+    tagline: useFallback ? (raw.tagline ?? fallback.tagline) : raw.tagline,
+    overviewLanguage: useFallback ? fallback.language : null,
+    fallbackLanguage: fallback?.language ?? null,
+  };
+};
+
 const differentOrNull = (original: string | null, title: string): string | null =>
   original && original !== title ? original : null;
 
@@ -503,6 +608,7 @@ export const parseMovieDetails = (raw: unknown, region: string): MediaDetails =>
   return {
     ...mapMovie({ ...movie, genre_ids: movie.genres.map((genre) => genre.id) }),
     ...mapCommon(movie, region),
+    ...withTextFallback(movie, TMDB_LANGUAGE),
     originalTitle: differentOrNull(movie.original_title, movie.title),
     certification: pickCertification(
       movie.release_dates.results.map((r) => ({
@@ -511,7 +617,7 @@ export const parseMovieDetails = (raw: unknown, region: string): MediaDetails =>
       })),
       region,
     ),
-    keywords: movie.keywords.keywords.map((k) => k.name).slice(0, LIMITS.keywords),
+    keywords: movie.keywords.keywords.slice(0, LIMITS.keywords),
     runtimeMinutes: movie.runtime,
     budget: movie.budget,
     revenue: movie.revenue,
@@ -532,12 +638,13 @@ export const parseTvDetails = (raw: unknown, region: string): MediaDetails => {
   return {
     ...mapTv({ ...tv, genre_ids: tv.genres.map((genre) => genre.id) }),
     ...mapCommon(tv, region),
+    ...withTextFallback(tv, TMDB_LANGUAGE),
     originalTitle: differentOrNull(tv.original_name, tv.name),
     certification: pickCertification(
       tv.content_ratings.results.map((r) => ({ region: r.iso_3166_1, values: [r.rating] })),
       region,
     ),
-    keywords: tv.keywords.results.map((k) => k.name).slice(0, LIMITS.keywords),
+    keywords: tv.keywords.results.slice(0, LIMITS.keywords),
     runtimeMinutes: firstPositive(tv.episode_run_time),
     budget: null,
     revenue: null,
@@ -573,13 +680,26 @@ export const parseTvDetails = (raw: unknown, region: string): MediaDetails => {
 export const DETAILS_PARSERS: Readonly<
   Record<MediaType, (raw: unknown, region: string) => MediaDetails>
 > = {
-  movie: parseMovieDetails,
-  tv: parseTvDetails,
+  [MediaType.Movie]: parseMovieDetails,
+  [MediaType.Tv]: parseTvDetails,
 };
 
-/** Route param → TMDB id, or null for anything that isn't a positive integer. */
-export const parseMediaId = (value: string): number | null => {
-  if (!/^\d{1,10}$/.test(value)) return null;
-  const id = Number(value);
-  return id > 0 ? id : null;
+// ===================== Artwork fallback =====================
+
+/** Just the artwork of a details response in another language. */
+const artworkSchema = z.object({ poster_path: emptyToNull, backdrop_path: emptyToNull });
+
+/** Does the page still miss artwork that another language might have? */
+export const needsArtworkFallback = (details: MediaDetails): boolean =>
+  details.fallbackLanguage !== null && (!details.posterPath || !details.backdropPath);
+
+/** Pure: fill missing poster/backdrop from a details response in `fallbackLanguage`. */
+export const withArtworkFallback = (details: MediaDetails, raw: unknown): MediaDetails => {
+  const artwork = artworkSchema.safeParse(raw);
+  if (!artwork.success) return details;
+  return {
+    ...details,
+    posterPath: details.posterPath ?? artwork.data.poster_path,
+    backdropPath: details.backdropPath ?? artwork.data.backdrop_path,
+  };
 };

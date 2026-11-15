@@ -1,25 +1,54 @@
 import { Suspense } from "react";
-import { TrendingHeroSection, TrendingRow } from "@/modules/catalog/server";
+import {
+  MovieList,
+  MovieListRow,
+  TrendingHeroSection,
+  TrendingRow,
+  TrendingScope,
+} from "@/modules/catalog/server";
+import { UpNextRow } from "@/modules/episodes";
+import { BecauseYouLikedRow } from "@/modules/library";
 import { routes } from "@/shared/config/routes";
+import { MediaType } from "@/shared/lib/tmdb/types";
 import { PageSpinner } from "@/shared/ui/spinner";
 
-/** Each section streams on its own; with cached data all of it is in the prerendered shell. */
+const ROW_FALLBACK = "min-h-72";
+
+/**
+ * Personal rows (Up next, Because you liked…) render in the browser from localStorage and
+ * stay hidden until there is something to show. TMDB rows are cached on the server and
+ * stream in their own Suspense boundaries.
+ */
 export default function HomePage() {
   return (
-    <div className="space-y-12">
+    <div className="space-y-10 sm:space-y-12">
       <h1 className="sr-only">Trending movies and series</h1>
       <Suspense fallback={<PageSpinner className="min-h-[40vh]" label="Loading trending" />}>
         <TrendingHeroSection />
       </Suspense>
-      <Suspense fallback={<PageSpinner className="min-h-72" label="Loading trending movies" />}>
+      <UpNextRow />
+      <Suspense fallback={<PageSpinner className={ROW_FALLBACK} label="Loading trending movies" />}>
         <TrendingRow
           title="Trending movies this week"
-          scope="movie"
-          href={routes.browse("movie")}
+          scope={TrendingScope.Movie}
+          href={routes.browse(MediaType.Movie)}
         />
       </Suspense>
-      <Suspense fallback={<PageSpinner className="min-h-72" label="Loading trending series" />}>
-        <TrendingRow title="Trending series this week" scope="tv" href={routes.browse("tv")} />
+      <Suspense fallback={<PageSpinner className={ROW_FALLBACK} label="Loading trending series" />}>
+        <TrendingRow
+          title="Trending series this week"
+          scope={TrendingScope.Tv}
+          href={routes.browse(MediaType.Tv)}
+        />
+      </Suspense>
+      <BecauseYouLikedRow />
+      <Suspense
+        fallback={<PageSpinner className={ROW_FALLBACK} label="Loading movies in theaters" />}
+      >
+        <MovieListRow title="In theaters" list={MovieList.NowPlaying} />
+      </Suspense>
+      <Suspense fallback={<PageSpinner className={ROW_FALLBACK} label="Loading upcoming movies" />}>
+        <MovieListRow title="Coming soon" list={MovieList.Upcoming} />
       </Suspense>
     </div>
   );

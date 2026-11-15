@@ -3,8 +3,16 @@
  * the locale is always passed in, which keeps them trivially testable.
  * React components use them through the hooks in `@/shared/hooks`.
  */
+import { TMDB_RATING_MAX } from "@/shared/lib/tmdb/constants";
 
 export type DateInput = Date | string | number;
+
+const MS_PER_SECOND = 1000;
+const SECONDS = { minute: 60, hour: 60 * 60, day: 60 * 60 * 24 } as const;
+const MINUTES_PER_HOUR = 60;
+const HOURS_PER_DAY = 24;
+/** TMDB money values are USD. */
+const DEFAULT_CURRENCY = "USD";
 
 const toDate = (input: DateInput): Date | null => {
   const date = input instanceof Date ? input : new Date(input);
@@ -36,12 +44,12 @@ type RelativeUnit = readonly [Intl.RelativeTimeFormatUnit, number];
 const SECOND_UNIT: RelativeUnit = ["second", 1];
 
 const RELATIVE_UNITS: ReadonlyArray<RelativeUnit> = [
-  ["year", 60 * 60 * 24 * 365],
-  ["month", 60 * 60 * 24 * 30],
-  ["week", 60 * 60 * 24 * 7],
-  ["day", 60 * 60 * 24],
-  ["hour", 60 * 60],
-  ["minute", 60],
+  ["year", SECONDS.day * 365],
+  ["month", SECONDS.day * 30],
+  ["week", SECONDS.day * 7],
+  ["day", SECONDS.day],
+  ["hour", SECONDS.hour],
+  ["minute", SECONDS.minute],
   SECOND_UNIT,
 ];
 
@@ -54,7 +62,7 @@ export const formatRelativeTime = (
   const reference = toDate(now);
   if (!date || !reference) return "";
 
-  const diffSeconds = Math.round((date.getTime() - reference.getTime()) / 1000);
+  const diffSeconds = Math.round((date.getTime() - reference.getTime()) / MS_PER_SECOND);
   const [unit, secondsInUnit] =
     RELATIVE_UNITS.find(([, seconds]) => Math.abs(diffSeconds) >= seconds) ?? SECOND_UNIT;
 
@@ -68,8 +76,8 @@ export const formatRelativeTime = (
 export const formatRuntime = (minutes: number | null | undefined, locale: string): string => {
   if (minutes === null || minutes === undefined || !Number.isFinite(minutes) || minutes <= 0)
     return "";
-  const hours = Math.floor(minutes / 60);
-  const rest = Math.round(minutes % 60);
+  const hours = Math.floor(minutes / MINUTES_PER_HOUR);
+  const rest = Math.round(minutes % MINUTES_PER_HOUR);
   const unit = (value: number, u: "hour" | "minute") =>
     new Intl.NumberFormat(locale, { style: "unit", unit: u, unitDisplay: "narrow" }).format(value);
 
@@ -89,7 +97,7 @@ export const formatRating = (
     : new Intl.NumberFormat(locale, {
         minimumFractionDigits: fractionDigits,
         maximumFractionDigits: fractionDigits,
-      }).format(Math.min(10, Math.max(0, value)));
+      }).format(Math.min(TMDB_RATING_MAX, Math.max(0, value)));
 
 /** 12345 → "12K" / "12.3K" (compact notation). */
 export const formatCompactNumber = (value: number | null | undefined, locale: string): string =>
@@ -109,11 +117,38 @@ export const formatLanguage = (code: string | null | undefined, locale: string):
   }
 };
 
+/** ISO 3166-1 code → region name in the UI locale ("DE" → "Germany"); falls back to the code. */
+export const formatRegion = (code: string | null | undefined, locale: string): string => {
+  if (!code) return "";
+  try {
+    return new Intl.DisplayNames([locale], { type: "region" }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+};
+
+/** Minutes → "3 d 4 h" / "5 h 20 m" for large totals (stats), localized units. */
+export const formatDuration = (minutes: number, locale: string): string => {
+  if (!Number.isFinite(minutes) || minutes <= 0) return "0 h";
+  const days = Math.floor(minutes / (MINUTES_PER_HOUR * HOURS_PER_DAY));
+  const hours = Math.floor((minutes % (MINUTES_PER_HOUR * HOURS_PER_DAY)) / MINUTES_PER_HOUR);
+  const rest = Math.round(minutes % MINUTES_PER_HOUR);
+  const unit = (value: number, u: "day" | "hour" | "minute") =>
+    new Intl.NumberFormat(locale, { style: "unit", unit: u, unitDisplay: "narrow" }).format(value);
+  return [
+    days > 0 ? unit(days, "day") : null,
+    hours > 0 ? unit(hours, "hour") : null,
+    days === 0 && rest > 0 ? unit(rest, "minute") : null,
+  ]
+    .filter((part): part is string => part !== null)
+    .join(" ");
+};
+
 /** TMDB budgets/revenue are USD; 0 means "unknown" in TMDB. */
 export const formatCurrency = (
   value: number | null | undefined,
   locale: string,
-  currency = "USD",
+  currency = DEFAULT_CURRENCY,
 ): string =>
   value === null || value === undefined || !Number.isFinite(value) || value <= 0
     ? ""

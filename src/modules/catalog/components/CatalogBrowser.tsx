@@ -22,6 +22,10 @@ import { CatalogFilters } from "./CatalogFilters";
 type Props = {
   readonly state: BrowseState;
   readonly genres: Readonly<Record<MediaType, ReadonlyArray<Genre>>>;
+  /** Name of the active keyword filter (resolved on the server), for its chip. */
+  readonly keywordName: string | null;
+  /** Newest selectable year, computed on the server per request. */
+  readonly maxYear: number;
   readonly initialPage: Paged<MediaSummary>;
 };
 
@@ -29,7 +33,7 @@ type Props = {
  * Single browse page with Movies / Series tabs. State lives in the URL (shareable, back/forward
  * work); the server renders page 1 for each state, the client only loads page 2+.
  */
-export function CatalogBrowser({ state, genres, initialPage }: Props) {
+export function CatalogBrowser({ state, genres, keywordName, maxYear, initialPage }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const query = useDiscoverInfinite(state.mediaType, state.filters, initialPage);
@@ -53,10 +57,10 @@ export function CatalogBrowser({ state, genres, initialPage }: Props) {
 
   return (
     <Tabs value={state.mediaType} onValueChange={handleTabChange} className="gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <TabsList aria-label="Media type">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <TabsList aria-label="Media type" className="w-full sm:w-auto">
           {BROWSE_TABS.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value} className="px-4">
+            <TabsTrigger key={tab.value} value={tab.value} className="flex-1 px-4 sm:flex-none">
               {tab.label}
             </TabsTrigger>
           ))}
@@ -64,6 +68,8 @@ export function CatalogBrowser({ state, genres, initialPage }: Props) {
         <CatalogFilters
           filters={state.filters}
           genres={genres[state.mediaType]}
+          keywordName={keywordName}
+          maxYear={maxYear}
           onChange={handleFiltersChange}
         />
       </div>

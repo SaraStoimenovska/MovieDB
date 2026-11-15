@@ -58,12 +58,17 @@ export default defineConfig([
   // Immutability & functional style for application code
   {
     files: ["src/**/*.{ts,tsx}"],
-    ignores: ["src/**/*.test.{ts,tsx}", "src/**/__tests__/**", "src/shared/ui/**"],
+    ignores: ["src/**/*.test.{ts,tsx}", "src/**/__tests__/**", "src/test/**", "src/shared/ui/**"],
     plugins: { functional },
     rules: {
       "functional/immutable-data": [
         "error",
-        { ignoreClasses: true, ignoreImmediateMutation: true },
+        // `ref.current = …` is React's intended API for refs; everything else stays immutable.
+        {
+          ignoreClasses: true,
+          ignoreImmediateMutation: true,
+          ignoreAccessorPattern: ["**.current"],
+        },
       ],
       "functional/no-let": "error",
       "functional/no-loop-statements": "error",

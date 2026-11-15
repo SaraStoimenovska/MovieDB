@@ -2,8 +2,9 @@
  * Pure helpers for building and guarding TMDB requests.
  * Shared by the server client and the `/api/tmdb/*` proxy route.
  */
+import { MAX_PROXY_PARAM_LENGTH } from "@/shared/lib/tmdb/constants";
 
-export type QueryValue = string | number | boolean | null | undefined;
+type QueryValue = string | number | boolean | null | undefined;
 export type QueryParams = Readonly<Record<string, QueryValue>>;
 
 /** Endpoints the browser may reach through the proxy. Everything else is rejected. */
@@ -14,6 +15,8 @@ const ALLOWED_PATHS: ReadonlyArray<RegExp> = [
   /^genre\/(movie|tv)\/list$/,
   /^(movie|tv)\/\d+$/,
   /^(movie|tv)\/\d+\/(credits|videos|recommendations|similar)$/,
+  /^(movie|tv)\/\d+\/watch\/providers$/,
+  /^tv\/\d+\/season\/\d+$/,
 ];
 
 /** Query parameters the proxy forwards. `api_key` is deliberately absent: the server adds it. */
@@ -23,6 +26,7 @@ const ALLOWED_QUERY_KEYS: ReadonlySet<string> = new Set([
   "query",
   "sort_by",
   "with_genres",
+  "with_keywords",
   "primary_release_year",
   "first_air_date_year",
   "vote_count.gte",
@@ -40,7 +44,7 @@ export const isAllowedTmdbPath = (path: string): boolean => {
 export const pickAllowedQuery = (params: URLSearchParams): QueryParams =>
   Object.fromEntries(
     [...params.entries()].filter(
-      ([key, value]) => ALLOWED_QUERY_KEYS.has(key) && value.length <= 200,
+      ([key, value]) => ALLOWED_QUERY_KEYS.has(key) && value.length <= MAX_PROXY_PARAM_LENGTH,
     ),
   );
 

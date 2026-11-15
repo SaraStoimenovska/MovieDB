@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isMediaKey, type MediaKey } from "@/shared/lib/tmdb/types";
 
 /**
  * Raw TMDB response schemas. TMDB is inconsistent (empty strings for unknown dates,
@@ -42,11 +43,14 @@ export const tmdbTvSchema = tmdbMediaBase.extend({
   first_air_date: nullableString,
 });
 
+/** `media_type` values TMDB returns in mixed results (people are not app media). */
+export const TmdbMediaType = { Movie: "movie", Tv: "tv", Person: "person" } as const;
+
 /** Items of `/trending/all/*` and `/search/multi`: movies, series and people. */
 export const tmdbMultiItemSchema = z.discriminatedUnion("media_type", [
-  tmdbMovieSchema.extend({ media_type: z.literal("movie") }),
-  tmdbTvSchema.extend({ media_type: z.literal("tv") }),
-  z.looseObject({ media_type: z.literal("person"), id: z.number() }),
+  tmdbMovieSchema.extend({ media_type: z.literal(TmdbMediaType.Movie) }),
+  tmdbTvSchema.extend({ media_type: z.literal(TmdbMediaType.Tv) }),
+  z.looseObject({ media_type: z.literal(TmdbMediaType.Person), id: z.number() }),
 ]);
 
 /** Results are parsed item by item (see `parsePagedResponse`), so one bad item never drops a page. */
@@ -60,4 +64,6 @@ export const tmdbPagedEnvelopeSchema = z.object({
 export type TmdbMovie = z.infer<typeof tmdbMovieSchema>;
 export type TmdbTv = z.infer<typeof tmdbTvSchema>;
 export type TmdbMultiItem = z.infer<typeof tmdbMultiItemSchema>;
-export type TmdbPagedEnvelope = z.infer<typeof tmdbPagedEnvelopeSchema>;
+
+/** Validates app media keys (`movie:550`) in persisted data. */
+export const mediaKeySchema = z.custom<MediaKey>(isMediaKey);

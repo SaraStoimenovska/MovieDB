@@ -1,9 +1,7 @@
 "use client";
 
-import Autoplay from "embla-carousel-autoplay";
 import Link from "next/link";
-import { useMemo } from "react";
-import { useReducedMotion } from "@/shared/hooks/useReducedMotion";
+import { CAROUSEL_DURATION } from "@/shared/config/timing";
 import { type MediaSummary } from "@/shared/lib/tmdb/types";
 import {
   Carousel,
@@ -12,10 +10,9 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/shared/ui/carousel";
+import { toDomId } from "@/shared/utils/dom";
+import { useAutoplayPlugins } from "../hooks/useAutoplayPlugins";
 import { MediaCard } from "./MediaCard";
-
-/** 5s: long enough to read a title before it moves, short enough to feel alive. */
-export const AUTOPLAY_DELAY_MS = 5000;
 
 type Props = {
   readonly title: string;
@@ -26,62 +23,48 @@ type Props = {
   readonly autoplay?: boolean;
 };
 
+/** Cards per view by breakpoint (≈2.4 on phones so the next card peeks in, hinting at scroll). */
 const ITEM = "basis-[42%] sm:basis-1/4 md:basis-1/5 lg:basis-1/6 xl:basis-[12.5%]";
+const CARD_SIZES = "(min-width: 1024px) 180px, 42vw";
+const NAV_BUTTON =
+  "top-1/3 hidden size-9 border-border/60 bg-background/90 text-foreground shadow-lg backdrop-blur-sm hover:bg-background disabled:opacity-40 sm:flex";
 
-/**
- * Infinite, looping card carousel. Autoplay pauses on hover and keyboard focus (so users can
- * read and click), and is disabled entirely for users who prefer reduced motion.
- */
+/** Infinite, looping card carousel (optionally auto-advancing). */
 export function MediaCarousel({ title, items, href, showType = false, autoplay = false }: Props) {
-  const reducedMotion = useReducedMotion();
-  const plugins = useMemo(
-    () =>
-      autoplay && !reducedMotion
-        ? [
-            Autoplay({
-              delay: AUTOPLAY_DELAY_MS,
-              stopOnInteraction: false,
-              stopOnMouseEnter: true,
-              stopOnFocusIn: true,
-            }),
-          ]
-        : [],
-    [autoplay, reducedMotion],
-  );
+  const plugins = useAutoplayPlugins(autoplay);
 
   if (items.length === 0) return null;
-  const headingId = `carousel-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+  const headingId = toDomId("carousel", title);
 
   return (
     <section aria-labelledby={headingId} className="space-y-3">
       <div className="flex items-baseline justify-between gap-4">
-        <h2 id={headingId} className="text-xl font-semibold tracking-tight">
+        <h2 id={headingId} className="text-lg font-semibold tracking-tight sm:text-xl">
           {title}
         </h2>
         {href && (
-          <Link href={href} className="text-sm text-muted-foreground hover:text-foreground">
+          <Link
+            href={href}
+            className="shrink-0 text-sm text-muted-foreground hover:text-foreground"
+          >
             See all
           </Link>
         )}
       </div>
       <Carousel
-        opts={{ loop: true, align: "start", duration: 30 }}
+        opts={{ loop: true, align: "start", duration: CAROUSEL_DURATION.cards }}
         plugins={plugins}
         className="group/carousel"
       >
         <CarouselContent>
           {items.map((media) => (
             <CarouselItem key={media.key} className={ITEM}>
-              <MediaCard
-                media={media}
-                showType={showType}
-                sizes="(min-width: 1024px) 180px, 42vw"
-              />
+              <MediaCard media={media} showType={showType} sizes={CARD_SIZES} />
             </CarouselItem>
           ))}
         </CarouselContent>
-        <CarouselPrevious className="top-1/3 left-2 hidden opacity-0 transition-opacity group-hover/carousel:opacity-100 focus-visible:opacity-100 sm:flex" />
-        <CarouselNext className="top-1/3 right-2 hidden opacity-0 transition-opacity group-hover/carousel:opacity-100 focus-visible:opacity-100 sm:flex" />
+        <CarouselPrevious className={`left-2 ${NAV_BUTTON}`} />
+        <CarouselNext className={`right-2 ${NAV_BUTTON}`} />
       </Carousel>
     </section>
   );

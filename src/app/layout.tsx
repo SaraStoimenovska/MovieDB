@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Suspense } from "react";
 import { SiteFooter, SiteHeader } from "@/modules/shell";
+import { NavigationProgress } from "@/shared/components/NavigationProgress";
 import { APP_DESCRIPTION, APP_NAME } from "@/shared/config/app";
 import { Providers } from "./providers";
 import "./globals.css";
@@ -30,6 +32,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="flex min-h-full flex-col">
         <Providers>
+          <Suspense fallback={null}>
+            <NavigationProgress />
+          </Suspense>
           <SiteHeader />
           <main className="container mx-auto flex-1 px-4 py-8">{children}</main>
           <SiteFooter />

@@ -3,7 +3,10 @@ import {
   formatCompactNumber,
   formatCurrency,
   formatDate,
+  formatDuration,
+  formatLanguage,
   formatRating,
+  formatRegion,
   formatRelativeTime,
   formatRuntime,
   formatYear,
@@ -87,6 +90,42 @@ describe("formatCompactNumber", () => {
     [1_500_000, "1.5M"],
   ])("formats %i", (value, expected) => {
     expect(formatCompactNumber(value, "en")).toBe(expected);
+  });
+});
+
+describe("formatLanguage", () => {
+  it.each([
+    ["fr", "en", "French"],
+    ["ja", "de", "Japanisch"],
+    [null, "en", ""],
+  ])("%s in %s → %s", (code, locale, expected) => {
+    expect(formatLanguage(code, locale)).toBe(expected);
+  });
+
+  it("falls back to the code for invalid input", () => {
+    expect(formatLanguage("!!", "en")).toBe("!!");
+  });
+});
+
+describe("formatRegion", () => {
+  it.each([
+    ["DE", "Germany"],
+    ["US", "United States"],
+    [undefined, ""],
+  ])("%s → %s", (code, expected) => {
+    expect(formatRegion(code, "en")).toBe(expected);
+  });
+});
+
+describe("formatDuration", () => {
+  it.each([
+    [0, "0 h"],
+    [-3, "0 h"],
+    [45, "45m"],
+    [125, "2h 5m"],
+    [60 * 24 * 2 + 60 * 3 + 15, "2d 3h"],
+  ])("%i minutes → %s", (minutes, expected) => {
+    expect(formatDuration(minutes, "en")).toBe(expected);
   });
 });
 

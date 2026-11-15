@@ -1,5 +1,7 @@
 import { type z } from "zod";
+import { TMDB_MAX_PAGE } from "@/shared/lib/tmdb/constants";
 import {
+  TmdbMediaType,
   type TmdbMovie,
   type TmdbMultiItem,
   type TmdbTv,
@@ -8,7 +10,7 @@ import {
   tmdbPagedEnvelopeSchema,
   tmdbTvSchema,
 } from "@/shared/lib/tmdb/schemas";
-import { type MediaSummary, type Paged, toMediaKey } from "@/shared/lib/tmdb/types";
+import { type MediaSummary, MediaType, type Paged, toMediaKey } from "@/shared/lib/tmdb/types";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -17,9 +19,9 @@ export const normalizeDate = (value: string | null): string | null =>
   value && ISO_DATE.test(value) ? value : null;
 
 export const mapMovie = (movie: TmdbMovie): MediaSummary => ({
-  key: toMediaKey("movie", movie.id),
+  key: toMediaKey(MediaType.Movie, movie.id),
   id: movie.id,
-  mediaType: "movie",
+  mediaType: MediaType.Movie,
   title: movie.title,
   overview: movie.overview,
   posterPath: movie.poster_path,
@@ -31,9 +33,9 @@ export const mapMovie = (movie: TmdbMovie): MediaSummary => ({
 });
 
 export const mapTv = (tv: TmdbTv): MediaSummary => ({
-  key: toMediaKey("tv", tv.id),
+  key: toMediaKey(MediaType.Tv, tv.id),
   id: tv.id,
-  mediaType: "tv",
+  mediaType: MediaType.Tv,
   title: tv.name,
   overview: tv.overview,
   posterPath: tv.poster_path,
@@ -47,11 +49,11 @@ export const mapTv = (tv: TmdbTv): MediaSummary => ({
 /** People are not media: they map to `null` and are filtered out by the caller. */
 export const mapMultiItem = (item: TmdbMultiItem): MediaSummary | null => {
   switch (item.media_type) {
-    case "movie":
+    case TmdbMediaType.Movie:
       return mapMovie(item);
-    case "tv":
+    case TmdbMediaType.Tv:
       return mapTv(item);
-    case "person":
+    case TmdbMediaType.Person:
       return null;
   }
 };
@@ -62,7 +64,7 @@ const isPresent = <T>(value: T | null): value is T => value !== null;
  * Validates the envelope strictly and each result leniently:
  * invalid items are skipped instead of failing the whole page.
  */
-export const parsePagedResponse = <S extends z.ZodType, T>(
+const parsePagedResponse = <S extends z.ZodType, T>(
   raw: unknown,
   itemSchema: S,
   mapItem: (item: z.infer<S>) => T | null,
@@ -90,6 +92,12 @@ export const parseTvPage = (raw: unknown): Paged<MediaSummary> =>
 export const parseMultiPage = (raw: unknown): Paged<MediaSummary> =>
   parsePagedResponse(raw, tmdbMultiItemSchema, mapMultiItem);
 
-/** For infinite queries: next page number, or undefined when exhausted. TMDB caps paging at 500. */
+/** Page parser per media type (discover, trending/{type}, recommendations…). */
+export const PAGE_PARSERS: Readonly<Record<MediaType, (raw: unknown) => Paged<MediaSummary>>> = {
+  [MediaType.Movie]: parseMoviePage,
+  [MediaType.Tv]: parseTvPage,
+};
+
+/** For infinite queries: next page number, or undefined when exhausted. */
 export const getNextPageParam = (page: Paged<unknown>): number | undefined =>
-  page.page < Math.min(page.totalPages, 500) ? page.page + 1 : undefined;
+  page.page < Math.min(page.totalPages, TMDB_MAX_PAGE) ? page.page + 1 : undefined;

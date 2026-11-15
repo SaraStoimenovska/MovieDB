@@ -46,7 +46,7 @@ src/shared/              ui (shadcn), lib, hooks, utils, config, types: no featu
 - Format dates, numbers, runtime and currency through `shared/hooks` (`useFormatters`), or on the server through `shared/utils/format` with `APP_LOCALE`. Never inline `toLocaleString`.
 - The TMDB key is server-only (`src/shared/lib/env.ts`). Client code calls TMDB through `/api/tmdb/*`.
 - Name things: components `PascalCase.tsx`, hooks `useThing.ts`, everything else `kebab-case.ts`; tests next to the code as `*.test.ts(x)`.
-- Tests run in the `node` environment by default (fast). Files that render components or hooks start with `// @vitest-environment jsdom`.
+- Tests run in the `node` environment by default (fast). Files that render components or hooks start with `// @vitest-environment happy-dom`.
 - Cross-feature UI goes through slots, not imports: e.g. the app plugs library buttons into every `MediaCard` via `MediaCardActionsProvider` (see `src/app/providers.tsx`).
 
 ## Agents

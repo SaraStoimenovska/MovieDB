@@ -17,6 +17,9 @@ describe("isAllowedTmdbPath", () => {
     "movie/550",
     "tv/1399/credits",
     "/movie/550/",
+    "movie/550/watch/providers",
+    "tv/1399/season/2",
+    "movie/550/recommendations",
   ])("allows %s", (path) => {
     expect(isAllowedTmdbPath(path)).toBe(true);
   });
@@ -30,6 +33,9 @@ describe("isAllowedTmdbPath", () => {
     "movie/550/../../account",
     "discover/person",
     "trending/all/month",
+    "movie/550/season/1",
+    "tv/1399/season/abc",
+    "person/287",
   ])("rejects %s", (path) => {
     expect(isAllowedTmdbPath(path)).toBe(false);
   });
@@ -44,6 +50,12 @@ describe("pickAllowedQuery", () => {
       session_id: "x",
     });
     expect(pickAllowedQuery(params)).toEqual({ page: "2", sort_by: "popularity.desc" });
+  });
+
+  it("forwards the keyword filter", () => {
+    expect(pickAllowedQuery(new URLSearchParams({ with_keywords: "9715" }))).toEqual({
+      with_keywords: "9715",
+    });
   });
 
   it("drops oversized values", () => {

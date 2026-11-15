@@ -1,8 +1,11 @@
 import "server-only";
+import { connection } from "next/server";
 import { Suspense } from "react";
+import { FIRST_PAGE } from "@/shared/lib/tmdb/constants";
+import { MediaType } from "@/shared/lib/tmdb/types";
 import { PageSpinner } from "@/shared/ui/spinner";
-import { getDiscoverPage, getGenres } from "../api/server";
-import { parseBrowseState, toSearchParamsLike } from "../model/filters";
+import { getDiscoverPage, getGenres, getKeyword } from "../api/server";
+import { maxFilterYear, parseBrowseState, toSearchParamsLike } from "../model/filters";
 import { CatalogBrowser } from "./CatalogBrowser";
 
 type SearchParams = Promise<Record<string, string | ReadonlyArray<string> | undefined>>;
@@ -28,17 +31,25 @@ export function BrowseView({ searchParams }: { readonly searchParams: SearchPara
 }
 
 async function BrowseResults({ searchParams }: { readonly searchParams: SearchParams }) {
-  const state = parseBrowseState(toSearchParamsLike(await searchParams));
-  const [movieGenres, tvGenres, initialPage] = await Promise.all([
-    getGenres("movie"),
-    getGenres("tv"),
-    getDiscoverPage(state.mediaType, state.filters, 1),
+  const params = await searchParams;
+  // The year range depends on today's date: mark this as request-time work (Cache Components
+  // must not read the clock while prerendering), and hand the result to the client filters.
+  await connection();
+  const maxYear = maxFilterYear();
+  const state = parseBrowseState(toSearchParamsLike(params), maxYear);
+  const [movieGenres, tvGenres, initialPage, keyword] = await Promise.all([
+    getGenres(MediaType.Movie),
+    getGenres(MediaType.Tv),
+    getDiscoverPage(state.mediaType, state.filters, FIRST_PAGE),
+    state.filters.keywordId === null ? null : getKeyword(state.filters.keywordId),
   ]);
 
   return (
     <CatalogBrowser
       state={state}
-      genres={{ movie: movieGenres, tv: tvGenres }}
+      genres={{ [MediaType.Movie]: movieGenres, [MediaType.Tv]: tvGenres }}
+      keywordName={keyword?.name ?? null}
+      maxYear={maxYear}
       initialPage={initialPage}
     />
   );

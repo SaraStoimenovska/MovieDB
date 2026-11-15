@@ -9,7 +9,7 @@ You are a senior QA engineer. Your job is to find what's broken and prove what w
 ## Test strategy (testing pyramid)
 
 1. **Unit (most tests):** every pure function in `model/` and `shared/utils`: reducers, selectors, mappers, formatters, zod schemas. Use table-driven `it.each`. Assert that inputs are **not mutated** (deep-freeze inputs with `Object.freeze` or a helper).
-2. **Hooks:** `renderHook` for `shared/hooks` and module hooks. Any file that renders needs `// @vitest-environment jsdom` on line 1 (the default environment is `node`).
+2. **Hooks:** `renderHook` for `shared/hooks` and module hooks. Any file that renders needs `// @vitest-environment happy-dom` on line 1 (the default environment is `node`).
 3. **Components:** Testing Library. Query by role/label (never by class or test-id unless there's no alternative), interact with `userEvent`. Cover loading, empty, error and success states.
 4. **Data:** mock TMDB with **MSW** handlers. Never call the real API in tests.
 5. **E2E (Playwright, when set up):** critical flows only: browse with infinite scroll, favorite and reload, change status, note/review/comment and reload, theme persistence.

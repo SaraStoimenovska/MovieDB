@@ -7,6 +7,7 @@ import { tmdbImageUrl } from "@/shared/lib/tmdb/image";
 import { Button } from "@/shared/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/shared/ui/dialog";
 import { type ImageAsset } from "../model/details";
+import { SECTION_IDS } from "../model/presentation";
 
 type Props = { readonly title: string; readonly images: ReadonlyArray<ImageAsset> };
 
@@ -22,8 +23,8 @@ export function ImageGallery({ title, images }: Props) {
     setOpenIndex((index) => (index === null ? null : wrap(index + delta, images.length)));
 
   return (
-    <section aria-labelledby="images-heading" className="space-y-3">
-      <h2 id="images-heading" className="text-xl font-semibold tracking-tight">
+    <section aria-labelledby={SECTION_IDS.images} className="space-y-3">
+      <h2 id={SECTION_IDS.images} className="text-xl font-semibold tracking-tight">
         Images{" "}
         <span className="text-base font-normal text-muted-foreground">({images.length})</span>
       </h2>

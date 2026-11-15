@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export type Genre = { readonly id: number; readonly name: string };
 
-export const tmdbGenreListSchema = z.object({
+const tmdbGenreListSchema = z.object({
   genres: z.array(z.object({ id: z.number().int(), name: z.string() })),
 });
 

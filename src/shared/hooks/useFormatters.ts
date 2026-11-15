@@ -7,6 +7,9 @@ import {
   formatCompactNumber,
   formatCurrency,
   formatDate,
+  formatDuration,
+  formatLanguage,
+  formatRegion,
   formatRating,
   formatRelativeTime,
   formatRuntime,
@@ -14,9 +17,9 @@ import {
 } from "@/shared/utils/format";
 
 /**
- * Locale-bound formatters for client components.
- * The pure functions live in `@/shared/utils/format`; this hook only binds the locale,
- * so swapping in a user-selected locale later is a single change.
+ * The formatting hook for client components: every formatter bound to the current locale.
+ * The pure functions live in `@/shared/utils/format` (also usable on the server with
+ * APP_LOCALE); this hook only binds the locale, so a user-selected locale later is one change.
  */
 export const useFormatters = (locale: string = APP_LOCALE) =>
   useMemo(
@@ -30,16 +33,9 @@ export const useFormatters = (locale: string = APP_LOCALE) =>
       compactNumber: (value: number | null | undefined) => formatCompactNumber(value, locale),
       currency: (value: number | null | undefined, currency?: string) =>
         formatCurrency(value, locale, currency),
+      language: (code: string | null | undefined) => formatLanguage(code, locale),
+      region: (code: string | null | undefined) => formatRegion(code, locale),
+      duration: (minutes: number) => formatDuration(minutes, locale),
     }),
     [locale],
   );
-
-export type Formatters = ReturnType<typeof useFormatters>;
-
-/** Convenience single-purpose hooks, for components that need just one formatter. */
-export const useFormatDate = () => useFormatters().date;
-export const useRelativeTime = () => useFormatters().relativeTime;
-export const useFormatRuntime = () => useFormatters().runtime;
-export const useFormatRating = () => useFormatters().rating;
-export const useFormatNumber = () => useFormatters().compactNumber;
-export const useFormatCurrency = () => useFormatters().currency;

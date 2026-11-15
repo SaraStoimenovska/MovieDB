@@ -1,18 +1,23 @@
 import "server-only";
 import { type Metadata } from "next";
+import { OG_POSTER_SIZE } from "@/shared/lib/tmdb/constants";
 import { tmdbImageUrl } from "@/shared/lib/tmdb/image";
-import { type MediaType } from "@/shared/lib/tmdb/types";
-import { parseMediaId } from "../model/details";
+import { MediaType } from "@/shared/lib/tmdb/types";
+import { truncate } from "@/shared/utils/text";
+import { parseTmdbId } from "@/shared/lib/tmdb/ids";
 import { getMediaDetails } from "./server";
 
+/** Search engines show ~155–160 characters of a description. */
 const DESCRIPTION_LIMIT = 160;
 
-const truncate = (text: string, limit: number): string =>
-  text.length <= limit ? text : `${text.slice(0, limit - 1).trimEnd()}…`;
+const OG_TYPE: Readonly<Record<MediaType, "video.movie" | "video.tv_show">> = {
+  [MediaType.Movie]: "video.movie",
+  [MediaType.Tv]: "video.tv_show",
+};
 
 /** Shared `generateMetadata` body for the movie and series detail routes. */
 export async function buildMediaMetadata(mediaType: MediaType, rawId: string): Promise<Metadata> {
-  const id = parseMediaId(rawId);
+  const id = parseTmdbId(rawId);
   const media = id === null ? null : await getMediaDetails(mediaType, id);
   if (!media) return { title: "Not found" };
 
@@ -25,8 +30,8 @@ export async function buildMediaMetadata(mediaType: MediaType, rawId: string): P
     openGraph: {
       title: media.title,
       description,
-      type: mediaType === "movie" ? "video.movie" : "video.tv_show",
-      images: poster ? [{ url: poster, width: 500, height: 750, alt: media.title }] : undefined,
+      type: OG_TYPE[mediaType],
+      images: poster ? [{ url: poster, ...OG_POSTER_SIZE, alt: media.title }] : undefined,
     },
   };
 }

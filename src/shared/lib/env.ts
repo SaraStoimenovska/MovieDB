@@ -12,7 +12,7 @@ const serverEnvSchema = z.object({
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
 
-export const parseServerEnv = (source: Readonly<Record<string, string | undefined>>): ServerEnv =>
+const parseServerEnv = (source: Readonly<Record<string, string | undefined>>): ServerEnv =>
   serverEnvSchema.parse(source);
 
 export const serverEnv: ServerEnv = parseServerEnv(process.env);

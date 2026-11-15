@@ -5,12 +5,15 @@ import { useMemo } from "react";
 import { MediaGrid } from "@/modules/media";
 import { PageSpinner } from "@/shared/ui/spinner";
 import { useLibraryData } from "../hooks/useLibrary";
-import { selectFavorites } from "../model/library";
+import { selectFavorites, snapshotToSummary } from "../model/library";
 import { LibraryEmptyState } from "./LibraryEmptyState";
 
 export function FavoritesView() {
   const { data, ready } = useLibraryData();
-  const favorites = useMemo(() => selectFavorites(data).map((entry) => entry.media), [data]);
+  const favorites = useMemo(
+    () => selectFavorites(data).map((entry) => snapshotToSummary(entry.media)),
+    [data],
+  );
 
   if (!ready) return <PageSpinner label="Loading favorites" />;
 

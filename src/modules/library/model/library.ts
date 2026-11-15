@@ -1,26 +1,39 @@
 import { z } from "zod";
-import { type MediaKey, type MediaSummary } from "@/shared/lib/tmdb/types";
+import { isValidRating, RATING_SCALE } from "@/shared/config/rating";
+import { STORAGE_KEYS } from "@/shared/config/storage-keys";
+import { mediaKeySchema } from "@/shared/lib/tmdb/schemas";
+import { type MediaKey, type MediaSummary, MediaType } from "@/shared/lib/tmdb/types";
 
 // ===================== Types =====================
 
-export const WATCH_STATUSES = ["to_watch", "watched"] as const;
-export type WatchStatus = (typeof WATCH_STATUSES)[number];
+export const WatchStatus = { ToWatch: "to_watch", Watched: "watched" } as const;
+export type WatchStatus = (typeof WatchStatus)[keyof typeof WatchStatus];
+
+export const WATCH_STATUSES: ReadonlyArray<WatchStatus> = Object.values(WatchStatus);
 
 export const WATCH_STATUS_LABELS: Readonly<Record<WatchStatus, string>> = {
-  to_watch: "Want to watch",
-  watched: "Watched",
+  [WatchStatus.ToWatch]: "Want to watch",
+  [WatchStatus.Watched]: "Watched",
 };
 
-/** Card data kept with the entry, so the library pages render without calling TMDB. */
-export type MediaSnapshot = MediaSummary;
+/**
+ * The minimum card data kept with each entry, so the library pages render without calling TMDB.
+ * Long or unused fields (overview, backdrop) are not stored: localStorage is small (~5 MB).
+ */
+export type MediaSnapshot = Omit<MediaSummary, "overview" | "backdropPath">;
 
 export type LibraryEntry = {
   readonly media: MediaSnapshot;
   readonly isFavorite: boolean;
   readonly status: WatchStatus | null;
+  /** Personal 1–10 rating (rating something marks it as watched). */
+  readonly rating: number | null;
+  /** Known when saved from a details page; feeds "time watched" in the stats. */
+  readonly runtimeMinutes: number | null;
   /** Epoch ms. */
   readonly favoritedAt: number | null;
   readonly statusAt: number | null;
+  readonly ratedAt: number | null;
   readonly updatedAt: number;
 };
 
@@ -28,41 +41,67 @@ export type LibraryData = { readonly entries: Readonly<Record<MediaKey, LibraryE
 
 export const EMPTY_LIBRARY: LibraryData = { entries: {} };
 
-// ===================== Persisted schema =====================
+/** Extra facts a caller may know (details page) but cards don't. */
+export type MediaExtras = { readonly runtimeMinutes?: number | null };
 
-export const LIBRARY_STORAGE_KEY = "mdb:library";
-export const LIBRARY_VERSION = 1;
+// ===================== Persisted schema (+ migrations) =====================
 
-const mediaKeySchema = z.custom<MediaKey>(
-  (value) => typeof value === "string" && /^(movie|tv):\d+$/.test(value),
-);
+export const LIBRARY_STORAGE_KEY = STORAGE_KEYS.library;
+/** v1: favorites + status. v2: + personal rating, runtime. v3: slimmer snapshot (no overview/backdrop). */
+export const LIBRARY_VERSION = 3;
 
 const snapshotSchema = z.object({
   key: mediaKeySchema,
   id: z.number().int().positive(),
-  mediaType: z.enum(["movie", "tv"]),
+  mediaType: z.enum(MediaType),
   title: z.string(),
-  overview: z.string(),
   posterPath: z.string().nullable(),
-  backdropPath: z.string().nullable(),
   releaseDate: z.string().nullable(),
   voteAverage: z.number(),
   voteCount: z.number(),
   genreIds: z.array(z.number()),
 });
 
-const entrySchema = z.object({
+const entryV1Schema = z.object({
   media: snapshotSchema,
   isFavorite: z.boolean(),
-  status: z.enum(WATCH_STATUSES).nullable(),
+  status: z.enum(WatchStatus).nullable(),
   favoritedAt: z.number().nullable(),
   statusAt: z.number().nullable(),
   updatedAt: z.number(),
 });
 
+const entrySchema = entryV1Schema.extend({
+  rating: z.number().int().min(RATING_SCALE.min).max(RATING_SCALE.max).nullable(),
+  runtimeMinutes: z.number().positive().nullable(),
+  ratedAt: z.number().nullable(),
+});
+
 export const libraryDataSchema: z.ZodType<LibraryData> = z.object({
   entries: z.record(mediaKeySchema, entrySchema),
 });
+
+const libraryV1Schema = z.object({ entries: z.record(mediaKeySchema, entryV1Schema) });
+
+/**
+ * Persisted data from an older version → current shape. Unknown/invalid data returns
+ * the empty library (and `validatedMerge` would reject it anyway).
+ */
+export const migrateLibrary = (persisted: unknown, fromVersion: number): LibraryData => {
+  if (fromVersion >= LIBRARY_VERSION) return persisted as LibraryData;
+  // v2 → v3 only dropped snapshot fields: zod strips unknown keys when the data is validated.
+  if (fromVersion === 2) return persisted as LibraryData;
+  const v1 = libraryV1Schema.safeParse(persisted);
+  if (!v1.success) return EMPTY_LIBRARY;
+  return {
+    entries: Object.fromEntries(
+      Object.entries(v1.data.entries).map(([key, entry]) => [
+        key,
+        { ...entry, rating: null, runtimeMinutes: null, ratedAt: null },
+      ]),
+    ),
+  };
+};
 
 // ===================== Pure helpers =====================
 
@@ -72,25 +111,34 @@ export const toMediaSnapshot = (media: MediaSummary): MediaSnapshot => ({
   id: media.id,
   mediaType: media.mediaType,
   title: media.title,
-  overview: media.overview.slice(0, 500),
   posterPath: media.posterPath,
-  backdropPath: media.backdropPath,
   releaseDate: media.releaseDate,
   voteAverage: media.voteAverage,
   voteCount: media.voteCount,
   genreIds: media.genreIds,
 });
 
+/** Snapshot → the summary shape cards take (fields that aren't stored are empty). */
+export const snapshotToSummary = (snapshot: MediaSnapshot): MediaSummary => ({
+  ...snapshot,
+  overview: "",
+  backdropPath: null,
+});
+
 const newEntry = (media: MediaSummary, now: number): LibraryEntry => ({
   media: toMediaSnapshot(media),
   isFavorite: false,
   status: null,
+  rating: null,
+  runtimeMinutes: null,
   favoritedAt: null,
   statusAt: null,
+  ratedAt: null,
   updatedAt: now,
 });
 
-const isEmptyEntry = (entry: LibraryEntry): boolean => !entry.isFavorite && entry.status === null;
+const isEmptyEntry = (entry: LibraryEntry): boolean =>
+  !entry.isFavorite && entry.status === null && entry.rating === null;
 
 const withoutKey = (data: LibraryData, key: MediaKey): LibraryData => {
   const { [key]: _removed, ...rest } = data.entries;
@@ -102,11 +150,17 @@ const updateEntry = (
   data: LibraryData,
   media: MediaSummary,
   now: number,
+  extras: MediaExtras,
   change: (entry: LibraryEntry) => LibraryEntry,
 ): LibraryData => {
   const current = data.entries[media.key] ?? newEntry(media, now);
-  // Refresh the snapshot on every change so titles/posters stay current.
-  const next = { ...change(current), media: toMediaSnapshot(media), updatedAt: now };
+  const next: LibraryEntry = {
+    ...change(current),
+    // Refresh the snapshot on every change so titles/posters stay current.
+    media: toMediaSnapshot(media),
+    runtimeMinutes: extras.runtimeMinutes ?? current.runtimeMinutes,
+    updatedAt: now,
+  };
   return isEmptyEntry(next)
     ? withoutKey(data, media.key)
     : { entries: { ...data.entries, [media.key]: next } };
@@ -114,8 +168,13 @@ const updateEntry = (
 
 // ===================== Reducers =====================
 
-export const toggleFavorite = (data: LibraryData, media: MediaSummary, now: number): LibraryData =>
-  updateEntry(data, media, now, (entry) => ({
+export const toggleFavorite = (
+  data: LibraryData,
+  media: MediaSummary,
+  now: number,
+  extras: MediaExtras = {},
+): LibraryData =>
+  updateEntry(data, media, now, extras, (entry) => ({
     ...entry,
     isFavorite: !entry.isFavorite,
     favoritedAt: entry.isFavorite ? null : now,
@@ -127,11 +186,37 @@ export const setWatchStatus = (
   media: MediaSummary,
   status: WatchStatus | null,
   now: number,
+  extras: MediaExtras = {},
 ): LibraryData =>
-  updateEntry(data, media, now, (entry) => {
+  updateEntry(data, media, now, extras, (entry) => {
     const next = entry.status === status ? null : status;
     return { ...entry, status: next, statusAt: next === null ? null : now };
   });
+
+/**
+ * Personal rating. Rating a title also marks it as watched (you rate what you've seen);
+ * `null` clears the rating but keeps the watch status.
+ */
+export const setRating = (
+  data: LibraryData,
+  media: MediaSummary,
+  rating: number | null,
+  now: number,
+  extras: MediaExtras = {},
+): LibraryData => {
+  if (rating !== null && !isValidRating(rating)) return data;
+  return updateEntry(data, media, now, extras, (entry) =>
+    rating === null
+      ? { ...entry, rating: null, ratedAt: null }
+      : {
+          ...entry,
+          rating,
+          ratedAt: now,
+          status: WatchStatus.Watched,
+          statusAt: entry.status === WatchStatus.Watched ? entry.statusAt : now,
+        },
+  );
+};
 
 export const removeFromLibrary = (data: LibraryData, key: MediaKey): LibraryData =>
   withoutKey(data, key);
@@ -159,14 +244,19 @@ export const selectByStatus = (
     .filter((entry) => entry.status === status)
     .toSorted(byNewest("statusAt"));
 
+/** The favorite to base "Because you liked …" on: the most recently favorited one. */
+export const selectLatestFavorite = (data: LibraryData): LibraryEntry | null =>
+  selectFavorites(data)[0] ?? null;
+
 export type LibraryCounts = Readonly<Record<"favorites" | WatchStatus, number>>;
 
-export const selectCounts = (data: LibraryData): LibraryCounts =>
-  Object.values(data.entries).reduce<LibraryCounts>(
-    (counts, entry) => ({
-      favorites: counts.favorites + (entry.isFavorite ? 1 : 0),
-      to_watch: counts.to_watch + (entry.status === "to_watch" ? 1 : 0),
-      watched: counts.watched + (entry.status === "watched" ? 1 : 0),
-    }),
-    { favorites: 0, to_watch: 0, watched: 0 },
-  );
+export const selectCounts = (data: LibraryData): LibraryCounts => {
+  const entries = Object.values(data.entries);
+  const countStatus = (status: WatchStatus) =>
+    entries.filter((entry) => entry.status === status).length;
+  return {
+    favorites: entries.filter((entry) => entry.isFavorite).length,
+    [WatchStatus.ToWatch]: countStatus(WatchStatus.ToWatch),
+    [WatchStatus.Watched]: countStatus(WatchStatus.Watched),
+  };
+};

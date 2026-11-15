@@ -1,8 +1,9 @@
 import "server-only";
-import { getTrending } from "../api/server";
+import { HERO_SLIDES } from "@/shared/config/app";
+import { getTrending, TrendingScope, TrendingWindow } from "../api/server";
 import { TrendingHero } from "./TrendingHero";
 
 export async function TrendingHeroSection() {
-  const items = await getTrending("all", "day");
-  return <TrendingHero items={items.slice(0, 10)} />;
+  const items = await getTrending(TrendingScope.All, TrendingWindow.Day);
+  return <TrendingHero items={items.slice(0, HERO_SLIDES)} />;
 }

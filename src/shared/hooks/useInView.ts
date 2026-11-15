@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { INFINITE_SCROLL_ROOT_MARGIN } from "@/shared/config/timing";
 
 type Options = {
   readonly rootMargin?: string;
@@ -18,7 +19,7 @@ type Options = {
  * "visible" before the new observer has measured the element's real position.
  */
 export const useInView = <E extends Element = HTMLDivElement>({
-  rootMargin = "200px",
+  rootMargin = INFINITE_SCROLL_ROOT_MARGIN,
   threshold = 0,
   disabled = false,
 }: Options = {}) => {

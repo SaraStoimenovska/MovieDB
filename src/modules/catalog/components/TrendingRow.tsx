@@ -1,6 +1,6 @@
 import "server-only";
 import { MediaCarousel } from "@/modules/media";
-import { getTrending, type TrendingScope, type TrendingWindow } from "../api/server";
+import { getTrending, TrendingScope, TrendingWindow } from "../api/server";
 
 type Props = {
   readonly title: string;
@@ -10,9 +10,15 @@ type Props = {
 };
 
 /** Cached server data → auto-advancing, infinitely looping carousel. */
-export async function TrendingRow({ title, scope, window = "week", href }: Props) {
+export async function TrendingRow({ title, scope, window = TrendingWindow.Week, href }: Props) {
   const items = await getTrending(scope, window);
   return (
-    <MediaCarousel title={title} items={items} href={href} showType={scope === "all"} autoplay />
+    <MediaCarousel
+      title={title}
+      items={items}
+      href={href}
+      showType={scope === TrendingScope.All}
+      autoplay
+    />
   );
 }

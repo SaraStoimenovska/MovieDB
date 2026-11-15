@@ -1,9 +1,7 @@
 import { tmdbProxyGet } from "@/shared/lib/tmdb/browser";
-import { parseMoviePage, parseTvPage } from "@/shared/lib/tmdb/mappers";
+import { PAGE_PARSERS } from "@/shared/lib/tmdb/mappers";
 import { type MediaSummary, type MediaType, type Paged } from "@/shared/lib/tmdb/types";
 import { type CatalogFilters, toDiscoverParams } from "../model/filters";
-
-const PAGE_PARSERS = { movie: parseMoviePage, tv: parseTvPage } as const;
 
 export const fetchDiscoverPage = async (
   mediaType: MediaType,

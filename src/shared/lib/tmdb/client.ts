@@ -1,20 +1,23 @@
 import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { TMDB_LANGUAGE } from "@/shared/config/app";
+import { CACHE_LIFE, CacheTag } from "@/shared/config/cache";
 import { serverEnv } from "@/shared/lib/env";
 import { buildTmdbUrl, type QueryParams } from "@/shared/lib/tmdb/request";
 
 export type TmdbRequestError = Error & { readonly status: number; readonly path: string };
 
+const TMDB_ERROR_NAME = "TmdbRequestError";
+
 const createTmdbError = (status: number, path: string): TmdbRequestError =>
   Object.assign(new Error(`TMDB request failed (${status}) for "${path}"`), {
-    name: "TmdbRequestError",
+    name: TMDB_ERROR_NAME,
     status,
     path,
   });
 
 export const isTmdbRequestError = (error: unknown): error is TmdbRequestError =>
-  error instanceof Error && error.name === "TmdbRequestError";
+  error instanceof Error && error.name === TMDB_ERROR_NAME;
 
 /**
  * Server-side TMDB GET. Returns raw JSON; callers parse it with the zod mappers.
@@ -40,7 +43,7 @@ export const tmdbGet = async (path: string, params: QueryParams = {}): Promise<u
  */
 export async function tmdbGetCached(path: string, params: QueryParams = {}): Promise<unknown> {
   "use cache";
-  cacheLife("hours");
-  cacheTag("tmdb");
+  cacheLife(CACHE_LIFE.proxy);
+  cacheTag(CacheTag.Tmdb);
   return tmdbGet(path, params);
 }
